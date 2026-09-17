@@ -63,3 +63,21 @@ A-SPICE 4.1 버전 기준으로 CL2 수준의 산출물을 점검하는 스킬 �
 ```
 
 **응답 요약:** 사용자가 직접 수정한 `CLAUDE.md`(개발 생명주기: 분석→설계→구현→테스트 순서 및 단계별 템플릿 산출물 정책 추가)를 점검. 오타("탬플릿"→"템플릿")와 파일 끝 줄바꿈 누락(MD047)을 수정. "지정된 템플릿"이 프로젝트 내 어디에도 정의/연결되어 있지 않다는 점은 참고사항으로 안내. 수정 사항을 커밋 후 origin/main에 푸시 완료.
+
+---
+
+### Prompt 7
+
+```text
+요구사항 분석을 위한 서브에이전트와 스킬 초안을 생성해줘.
+다음을 만족해야해
+- 내가 제시한 탬플릿을 준수해야해
+- ISO 26262와 A-SPICE 표준을 준수해야해
+- 기능 요구사항의 경우 UML/SysML을 이용해서 다이어그램으로 표현할 수 있어야해
+- 비기능 요구사항은 ISO25010의 기준에 따라 작성하고, 검증방안을 함께 제시해줘. 단, 실행 불가능한 검증 방안을 제시하지 마.
+- 모든 요구사항은 사람이 이해하는데 문제가 없어야 해. 명확성을 확보해.
+- 모든 요구사항은 이후 산출물에서 양방향 추적 가능해야해. 추적을 위한 방안을 제시하고, 그 방안대로 추적성을 유지해.
+- 모든 요구사항은 일관성을 확보해.
+```
+
+**응답 요약:** "내가 제시한 템플릿"이 아직 전달되지 않아 확인 질문 후, 사용자가 "템플릿은 나중에 줄게"를 선택 — 템플릿 없이 기본 스키마로 우선 초안 작성, 템플릿 도착 시 재구성하는 방식으로 설계. `.claude/agents/requirements-analyst.md`와 `.claude/skills/requirements-analysis/`(SKILL.md + references 7종: template-policy, requirement-schema, clarity-and-consistency(EARS 패턴), uml-sysml-diagrams(Mermaid requirementDiagram 등 활용), nfr-iso25010(ISO 25010 특성별 NFR과 실행 가능성 판단 기준), traceability(양방향 추적성 매트릭스), iso26262-aspice-alignment)를 생성. `aspice-auditor`/`aspice-cl2-auditor`와 상호 참조하도록 연결. 아직 커밋/푸시는 하지 않음(사용자 요청 대기).
