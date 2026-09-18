@@ -1,0 +1,31 @@
+testElapsed199msRemainsNormal (test_st_func_swr013_swr021.TestSTFUNC0001FreshnessBelowThreshold.testElapsed199msRemainsNormal)
+! ... [32mok[0m
+testElapsedExactly200msRemainsNormal (test_st_func_swr013_swr021.TestSTFUNC0002FreshnessExactlyAtThreshold.testElapsedExactly200msRemainsNormal)
+! ... [32mok[0m
+testElapsed201msTransitionsToDegraded (test_st_func_swr013_swr021.TestSTFUNC0003FreshnessJustOverThreshold.testElapsed201msTransitionsToDegraded)
+! ... [32mok[0m
+testDegradedObservedWithin300msAbsoluteBudget (test_st_func_swr013_swr021.TestSTFUNC0004FreshnessAtDetectionBudgetBound.testDegradedObservedWithin300msAbsoluteBudget)
+! ... [32mok[0m
+testMissingTimestampIsRejectedAndNotUsedInOutputDecision (test_st_func_swr013_swr021.TestSTFUNC0005TimestampMissingRejected.testMissingTimestampIsRejectedAndNotUsedInOutputDecision)
+! ... [32mok[0m
+testNonNumericTimestampIsRejectedAndNotUsedInOutputDecision (test_st_func_swr013_swr021.TestSTFUNC0006TimestampTypeErrorRejected.testNonNumericTimestampIsRejectedAndNotUsedInOutputDecision)
+! ... [32mok[0m
+testNegativeTimestampIsRejectedAndNotUsedInOutputDecision (test_st_func_swr013_swr021.TestSTFUNC0007TimestampOutOfRangeRejected.testNegativeTimestampIsRejectedAndNotUsedInOutputDecision)
+! ... [32mok[0m
+testNonBooleanIgnitionOnDoesNotCrashOrCorruptState (test_st_func_swr013_swr021.TestSTFUNC0008IgnitionOnTypeErrorDoesNotCrash.testNonBooleanIgnitionOnDoesNotCrashOrCorruptState)
+! ... [32mok[0m
+testMissingSensorFaultFieldResultsInFaultState (test_st_func_swr013_swr021.TestSTFUNC0009ProposedSensorFaultFieldMissing.testMissingSensorFaultFieldResultsInFaultState)
+! ... [32mok[0m
+testSensorFaultTrueFirstCycleHoldsPreviousConfirmedOutput (test_st_func_swr013_swr021.TestSTFUNC0010SensorFaultFirstCycleFreezesOutput.testSensorFaultTrueFirstCycleHoldsPreviousConfirmedOutput)
+! ... [32mok[0m
+testSensorFaultTrueSustainedAcrossCyclesKeepsOutputFrozen (test_st_func_swr013_swr021.TestSTFUNC0011SensorFaultSustainedKeepsOutputFrozen.testSensorFaultTrueSustainedAcrossCyclesKeepsOutputFrozen)
+! ... [32mok[0m
+testSensorFaultTransitionToTrueYieldsFaultStateAndWarningCode (test_st_func_swr013_swr021.TestSTFUNC0012SensorFaultTransitionTriggersFaultAndWarning.testSensorFaultTransitionToTrueYieldsFaultStateAndWarningCode)
+! ... [32mok[0m
+testSensorFaultSustainedKeepsFaultStateWithWarningCode (test_st_func_swr013_swr021.TestSTFUNC0013SensorFaultSustainedKeepsFaultAndWarning.testSensorFaultSustainedKeepsFaultStateWithWarningCode)
+! ... [32mok[0m
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.006s
+
+[32mOK[0m
