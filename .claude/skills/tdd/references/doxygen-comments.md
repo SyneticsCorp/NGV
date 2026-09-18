@@ -2,6 +2,8 @@
 
 Doxygen은 원래 C/C++/Java용 도구지만 Python도 지원합니다(공식 Doxygen이 Python 파서를 내장하고 있음, 또는 `doxypypy` 필터 사용). 이 프로젝트는 아래 형식을 기본으로 사용합니다.
 
+**이 문서는 구현(프로덕션) 코드의 주석 형식을 다룹니다.** 테스트 함수(`test*`)의 Doxygen 주석 형식(`@technique`, `@case` 등 테스트 전용 태그)은 `test-annotation.md`를 따르세요.
+
 ## 함수/메서드 주석 형식
 
 ```python
