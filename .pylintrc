@@ -15,7 +15,9 @@ argument-rgx=^[a-z][a-zA-Z0-9]{2,}$
 attr-naming-style=camelCase
 attr-rgx=^[a-z][a-zA-Z0-9]{2,}$
 method-naming-style=camelCase
-method-rgx=^[a-z][a-zA-Z0-9]{2,}$
+; __init__ 등 파이썬 던더(dunder) 메서드는 이름을 바꿀 수 없으므로 별도 허용한다(coding 단계에서 실제
+; 클래스를 구현하며 확인된 사각지대 — 그 외 일반 메서드는 기존과 동일하게 3자 이상 camelCase만 허용).
+method-rgx=^(__[a-zA-Z0-9_]+__|[a-z][a-zA-Z0-9]{2,})$
 
 [SIMILARITIES]
 ; 중복 코드는 7라인까지 허용 -> 8라인 이상부터 위반 (CLAUDE.md 구현 지침)

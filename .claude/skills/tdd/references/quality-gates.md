@@ -65,6 +65,12 @@ radon raw <파일> -s
 
 CLAUDE.md 지침이며 PEP 8 기본값(snake_case)과 다릅니다. 저장소 루트의 `.pylintrc`에 이미 이 설정이 반영되어 있습니다(그렇지 않으면 pylint가 기본 snake_case 규칙으로 camelCase 이름을 오히려 위반으로 표시합니다) — 새로 만들지 말고 그 파일을 그대로 사용하세요. `{2,}` 뒤 정규식은 "첫 글자 + 최소 2글자" = 최소 3글자를 강제합니다. 클래스명 등 CLAUDE.md가 규칙을 명시하지 않은 대상은 Python 관례(PascalCase)를 유지하되, 프로젝트에 다른 지시가 있으면 그것을 따르세요. `.pylintrc`를 수정할 일이 생기면 이 문서도 함께 갱신하세요.
 
+`method-rgx`는 `__init__` 등 이름을 바꿀 수 없는 파이썬 던더(dunder) 메서드를 별도로 허용합니다
+(`^(__[a-zA-Z0-9_]+__|[a-z][a-zA-Z0-9]{2,})$`, Phase 1 구현 중 확인된 사각지대 — 2026-09-18 갱신).
+그 외 일반 메서드/함수/변수/인자/속성명은 여전히 선행 밑줄(`_private`) 없이 3자 이상 camelCase만 허용합니다
+— "비공개(private)" 의도를 표현해야 하는 내부 헬퍼는 밑줄 접두어 대신 설명적인 camelCase 이름을 사용하세요
+(예: `_runCoreStages` 대신 `runCoreStages`).
+
 ```bash
 pylint --disable=all --enable=invalid-name <경로>
 ```
