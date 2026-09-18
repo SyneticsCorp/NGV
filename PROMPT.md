@@ -171,4 +171,24 @@ TDD 스킬을 다음 링크의 TDD 스킬로 변경해줘. 단, 기존 스킬에
 새로 추가한 서브에이전트와 스킬 인식해줘. 서브에이전트와 각 서브에이전트에서 사용하는 스킬의 경계를 명확히 정리해줘. 서로 중복되는 내용이 없도록 만들어줘.
 ```
 
-**응답 요약:** 사용자가 직접 추가한 `sw-system-tester`/`sw-system-test`(SWE.6)를 포함해 전체 7개 서브에이전트+스킬 쌍을 감사. (1) `sw-system-test`가 다른 스킬들과 달리 실제 회사 템플릿(TPL-SWE6-001/002)에 근거하지 않고 있어, 서브에이전트로 조사 — 단일 시트(Verification Specification: Test ID/SW Req/Level·Environment/Stimulus/Expected Result/Technique/Execution)이며 기능/비기능 구분 전용 컬럼이 없음을 확인(사용자 초안은 별도 시트로 가정했으나 실제와 다름). (2) `sw-system-test`를 다른 스킬과 동일한 SKILL.md+references 구조로 재구성(template-policy, test-design-techniques, nfr-verification, traceability-and-integration, writing-principles, iso26262-aspice-alignment 6종) — ISO 25010 품질특성 표(requirements-analysis의 nfr-iso25010.md가 원본)와 기본 테스트기법 정의(tdd/integration-testing이 원본)를 다시 나열하지 않고 참조만 하도록 정리해 중복 제거. 시스템 테스트 케이스 ID `ST-FUNC-`/`ST-NFR-<특성약어>-`를 신규 도입(특성약어표는 이 스킬에서 처음 정의한 것임을 명시). (3) `sw-system-tester` 에이전트에 `skills:` 프런트매터 필드 추가, 실제 템플릿/ID 체계 반영, "아키텍처 기반 테스트는 integration-tester로" 경계 문구 추가, `integration-tester`에도 "요구사항 기반은 sw-system-tester로" 역참조 추가. (4) CLAUDE.md에 빠져 있던 "상세설계 지침"/"통합 테스트 지침"/"시스템 테스트 지침"/"산출물 감사 지침" 절을 기존 분석/설계/구현 지침과 같은 형식으로 추가하고, 개발 생명주기에 설계(아키텍처→상세)·테스트(단위→통합→시스템) 세부 순서를 명시해 전체 파이프라인 경계를 한 곳에서 확인 가능하게 함. 전체 60개 마크다운 파일 markdownlint 통과 확인. 아직 커밋/푸시는 하지 않음(사용자 요청 대기).
+**응답 요약:** 사용자가 직접 추가한 `sw-system-tester`/`sw-system-test`(SWE.6)를 포함해 전체 7개 서브에이전트+스킬 쌍을 감사. (1) `sw-system-test`가 다른 스킬들과 달리 실제 회사 템플릿(TPL-SWE6-001/002)에 근거하지 않고 있어, 서브에이전트로 조사 — 단일 시트(Verification Specification: Test ID/SW Req/Level·Environment/Stimulus/Expected Result/Technique/Execution)이며 기능/비기능 구분 전용 컬럼이 없음을 확인(사용자 초안은 별도 시트로 가정했으나 실제와 다름). (2) `sw-system-test`를 다른 스킬과 동일한 SKILL.md+references 구조로 재구성(template-policy, test-design-techniques, nfr-verification, traceability-and-integration, writing-principles, iso26262-aspice-alignment 6종) — ISO 25010 품질특성 표(requirements-analysis의 nfr-iso25010.md가 원본)와 기본 테스트기법 정의(tdd/integration-testing이 원본)를 다시 나열하지 않고 참조만 하도록 정리해 중복 제거. 시스템 테스트 케이스 ID `ST-FUNC-`/`ST-NFR-<특성약어>-`를 신규 도입(특성약어표는 이 스킬에서 처음 정의한 것임을 명시). (3) `sw-system-tester` 에이전트에 `skills:` 프런트매터 필드 추가, 실제 템플릿/ID 체계 반영, "아키텍처 기반 테스트는 integration-tester로" 경계 문구 추가, `integration-tester`에도 "요구사항 기반은 sw-system-tester로" 역참조 추가. (4) CLAUDE.md에 빠져 있던 "상세설계 지침"/"통합 테스트 지침"/"시스템 테스트 지침"/"산출물 감사 지침" 절을 기존 분석/설계/구현 지침과 같은 형식으로 추가하고, 개발 생명주기에 설계(아키텍처→상세)·테스트(단위→통합→시스템) 세부 순서를 명시해 전체 파이프라인 경계를 한 곳에서 확인 가능하게 함. 전체 60개 마크다운 파일 markdownlint 통과 확인.
+
+---
+
+### Prompt 16
+
+```text
+커밋하고 푸시해
+```
+
+**응답 요약:** 경계 정리분(sw-system-test 재구성, CLAUDE.md 확장 등)을 커밋 후 origin/main에 푸시(`90adc78`).
+
+---
+
+### Prompt 17
+
+```text
+@CLAUDE.md 가 내가 작성한거랑 충돌같은데 해결해줘
+```
+
+**응답 요약:** CLAUDE.md를 재검토해 실제 충돌 지점을 발견 — "개발 생명주기"는 분석/설계/구현/테스트를 4개 독립 단계로 규정하는데, 직전 작업에서 추가한 "테스트는 단위테스트(구현과 함께 TDD로 수행)→통합→시스템" 문구가 단위테스트를 "구현" 소속이라 해놓고 동시에 "테스트" 단계의 첫 하위 단계처럼 적어 모순을 만들었음. 이미 사용자가 원래 작성한 "구현 지침"에 TDD가 명시되어 있어 단위테스트는 원래 "구현" 단계 소속이므로, 개발 생명주기 항목을 "단위 테스트는 구현 단계에서 수행(별도 단계 아님)" + "테스트는 통합→시스템"으로 분리해 모순을 해소. markdownlint 통과 확인, 아직 커밋/푸시는 하지 않음(사용자 요청 대기).

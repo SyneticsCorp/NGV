@@ -17,7 +17,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 이 프로젝트는 **반드시** 분석, 설계, 구현, 테스트의 순서로 개발을 진행한다.
 - 각 단계가 완료되었을 때, 지정된 탬플릿을 이용한 산출물이 생성되어야 한다.
 - "설계"는 아키텍처 설계(architecture-designer) → 상세설계(detailed-designer) 순으로 진행한다.
-- "테스트"는 단위 테스트(coding 서브에이전트가 구현과 함께 TDD로 수행) → 통합 테스트(integration-tester) → 시스템 테스트(sw-system-tester) 순으로 진행한다.
+- 단위 테스트는 "구현" 단계에서 coding 서브에이전트가 TDD 방식으로 함께 수행한다(별도 단계가 아님).
+- "테스트"는 통합 테스트(integration-tester) → 시스템 테스트(sw-system-tester) 순으로 진행한다.
 
 ### 분석 지침
 
