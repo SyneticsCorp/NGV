@@ -222,4 +222,21 @@ Git의 브랜치 정책을 적용해줘. 일반적으로 AI를 활용한 바이�
 요구사양서를 분석하고 작업 계획을 제시해줘. 네가 제시한 각 phase 마다 분석~테스트 단계를 거쳐야해. 한 단계가 끝날 때마다 내가 리뷰하고, 리뷰를 승인하면 Git에 Merge해줘. 내가 확인해줘야 하는 것은 한 번에 문의해줘.
 ```
 
-**응답 요약:** Plan Mode로 전환해 `OEM-SWR-001_OEM SW 요구사항 사양서.docx`(전자식 차일드락 제어 SW, 교육용 가상 OEM 시나리오) 전체를 Explore 에이전트로 정독 — 요구사항 13건(안전 ASIL B 4건, 기능 QM 7건, 비기능 QM 2건), 외부 인터페이스 9건, 추적성 매핑(자사 SWR-001~021 힌트), 인도 게이트 G1~G4(요구/설계/구현·통합/검증 — 우리 서브에이전트 체인과 1:1 대응), "Python 3.12 PC/SIL" 명시, 문서 전체가 "실제 승인/ASIL/인증을 나타내지 않는 품질교육용 가상 산출물"임을 재확인. 요구사항을 우선순위 사슬(충돌>접근위험억제>화재등강제해제>ISOFIX>자동잠금>ignition해제>운전자명령)에 따라 5개 Phase(①안전커널+아키텍처기초 ②안전긴급대응 ③차량상태자동제어+ISOFIX ④운전자명령/HMI ⑤횡단관심사-결정론/로깅)로 분해하는 계획을 설계. 사용자에게 (1)리뷰 단위(Phase 단위 vs 게이트별 세분화) (2)Python 버전(OEM문서 3.12 vs CLAUDE.md 3.14) 두 가지를 한 번에 질문 → "Phase 단위 5회 리뷰", "OEM의 3.12 따름"으로 확정. 최종 계획을 plan 파일에 작성 후 ExitPlanMode로 승인받음. 승인 직후 사전 작업 착수: 조사 중 실수로 생성된 `OEM_Sample/_extracted_dump.txt` 삭제, `CLAUDE.md`/`ci.yml`/`.pylintrc`/`tdd`·`detailed-design` 스킬 전반의 "Python 3.14"를 "3.12"로 일괄 수정(겸사겸사 "Pyhton" 오타도 수정), markdownlint 통과 확인. 아직 커밋/푸시는 하지 않음 — 이 변경을 작은 PR로 만들고, 이후 Phase 1(요구사항 분석→아키텍처설계→상세설계→구현→통합테스트→시스템테스트)을 브랜치+PR로 진행할 예정.
+**응답 요약:** Plan Mode로 전환해 `OEM-SWR-001_OEM SW 요구사항 사양서.docx`(전자식 차일드락 제어 SW, 교육용 가상 OEM 시나리오) 전체를 Explore 에이전트로 정독 — 요구사항 13건(안전 ASIL B 4건, 기능 QM 7건, 비기능 QM 2건), 외부 인터페이스 9건, 추적성 매핑(자사 SWR-001~021 힌트), 인도 게이트 G1~G4(요구/설계/구현·통합/검증 — 우리 서브에이전트 체인과 1:1 대응), "Python 3.12 PC/SIL" 명시, 문서 전체가 "실제 승인/ASIL/인증을 나타내지 않는 품질교육용 가상 산출물"임을 재확인. 요구사항을 우선순위 사슬(충돌>접근위험억제>화재등강제해제>ISOFIX>자동잠금>ignition해제>운전자명령)에 따라 5개 Phase(①안전커널+아키텍처기초 ②안전긴급대응 ③차량상태자동제어+ISOFIX ④운전자명령/HMI ⑤횡단관심사-결정론/로깅)로 분해하는 계획을 설계. 사용자에게 (1)리뷰 단위(Phase 단위 vs 게이트별 세분화) (2)Python 버전(OEM문서 3.12 vs CLAUDE.md 3.14) 두 가지를 한 번에 질문 → "Phase 단위 5회 리뷰", "OEM의 3.12 따름"으로 확정. 최종 계획을 plan 파일에 작성 후 ExitPlanMode로 승인받음. 승인 직후 사전 작업 착수: 조사 중 실수로 생성된 `OEM_Sample/_extracted_dump.txt` 삭제, `CLAUDE.md`/`ci.yml`/`.pylintrc`/`tdd`·`detailed-design` 스킬 전반의 "Python 3.14"를 "3.12"로 일괄 수정(겸사겸사 "Pyhton" 오타도 수정), markdownlint 통과 확인. 별도 PR(`chore/target-python-3.12`, #3)로 머지 완료 후 Phase 1 브랜치(`phase-1-safety-kernel`) 착수.
+
+---
+
+### Prompt 21~28 (Phase 1 진행 중 대화)
+
+```text
+tdd 방식으로 어떻게 진행하고 있는지 알려줘
+구현 끝나면 결과 알려줘
+첫 번째 페이즈는 왜이렇게 오래걸려?
+지금 방식대로 계속해줘
+구현 끝나면 결과 알려줘
+PR 하기 전에, 커밋 푸시 먼저 해줘.
+시스템 테스트 끝나면 알려줘
+승인
+```
+
+**응답 요약:** Phase 1(안전 커널, SWR-013/SWR-021)을 `requirements-analyst`→`architecture-designer`(2단계: A(헥사고날)+C(컴포넌트기반/모니터-액추에이터) 조합 선택, DEGRADED/FAULT는 병렬-상호배타-FAULT우선으로 결정)→`detailed-designer`(IU-0001~0009, 평가주기 50ms, 부팅초기값 LOCK/LOCK 등 확정)→`coding`(TDD, 52개 단위테스트, 품질게이트 전부 통과, `.pylintrc` 던더메서드 오탐도 스스로 수정)→`integration-tester`(43개 케이스, 문장/분기/함수/Call 커버리지 100%)→`sw-system-tester`(13개 케이스 ST-FUNC-0001~0013, 진입점을 `evaluateCycle()`에서 `handleCycle()`로 합리적 근거를 들어 변경)까지 전 게이트를 순차 실행. 진행 중 "왜 오래 걸리는지" 질문에 게이트당 서브에이전트가 매번 맥락 없이 새로 시작하고 실제 docx/xlsx 템플릿을 python-docx로 직접 조작하기 때문이라고 설명 → "지금 방식대로 계속"으로 확정. "PR 전에 커밋 푸시 먼저" 요청에 따라 커밋 메시지에 아직 끝나지 않은 SWE.6을 포함했다고 잘못 적은 걸 발견해 push 전에 amend로 정정, 이후 SWE.6 완료분은 별도 커밋으로 추가하면서 CI가 `tests_integration/`·`tests_system/`을 조용히 건너뛰던 실제 버그(`__init__.py` 누락 + `it_helpers`/`st_helpers` 바인딩 방식)를 직접 재현·수정해 108/108 테스트가 CI와 동일 명령으로 발견되게 만듦. PR #4를 열어 리뷰 요청 — CI에서 `python-quality`가 `_orchestrator`(밑줄 접두 camelCase 위반) 때문에 실패한 것을 발견해 수정 후 재확인, 전 CI 통과. 사용자가 5가지 확인사항(DEGRADED/FAULT 우선순위, 부팅초기값, sensor_fault invalid 처리, 시스템테스트 진입점 변경, ST-FUNC-0009 제안 케이스 처리)과 함께 "승인" → PR #4 squash 머지, 로컬 main 동기화. Phase 2 착수 예정.
