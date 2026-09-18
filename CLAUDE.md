@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 이 소프트웨어 개발은 다음의 항목을 이용해서 개발한다.
 
-- Pyhton 3.14를 이용해서 개발한다.
+- Python 3.12를 이용해서 개발한다(OEM-SWR-001 3절 "Python 3.12 PC/SIL" 명시 기준).
 - 코드 테스트는 unittest를 활용한다.
 - 순환복잡도, 함수라인수 등 측정 지표는 오픈소스 도구를 이용한다. 
 

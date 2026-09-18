@@ -2,7 +2,7 @@
 ; 이 파일을 수정할 때는 quality-gates.md도 함께 갱신하세요(반대로도 마찬가지).
 
 [MASTER]
-py-version=3.14
+py-version=3.12
 
 [BASIC]
 ; 함수/변수/인자명: 3자 이상, camelCase (CLAUDE.md 구현 지침)

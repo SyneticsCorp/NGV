@@ -1,13 +1,13 @@
 ---
 name: tdd
-description: 구현(코딩) 시 사용합니다. obra/superpowers의 test-driven-development 스킬(Iron Law, Red-Green-Refactor, "Name the Break"/"Exercise the Real Thing" 원칙, 뮤테이션 체크)을 Python/unittest에 맞게 각색하고, CLAUDE.md 구현 지침(Python 3.14, 함수 순수코드라인 50 이하, 순환복잡도 10 이하, 중복코드 7라인까지 허용, Doxygen 방식 주석 20% 이상, 3자 이상 camelCase 네이밍)과 결합해 제공합니다. 모든 테스트 함수는 사용 기법·긍정/부정 케이스 여부·Doxygen 형식의 테스트 목적을 문서화해야 합니다. coding 서브에이전트가 사용합니다. "구현", "코딩", "TDD" 등의 요청에 반응합니다.
+description: 구현(코딩) 시 사용합니다. obra/superpowers의 test-driven-development 스킬(Iron Law, Red-Green-Refactor, "Name the Break"/"Exercise the Real Thing" 원칙, 뮤테이션 체크)을 Python/unittest에 맞게 각색하고, CLAUDE.md 구현 지침(Python 3.12, 함수 순수코드라인 50 이하, 순환복잡도 10 이하, 중복코드 7라인까지 허용, Doxygen 방식 주석 20% 이상, 3자 이상 camelCase 네이밍)과 결합해 제공합니다. 모든 테스트 함수는 사용 기법·긍정/부정 케이스 여부·Doxygen 형식의 테스트 목적을 문서화해야 합니다. coding 서브에이전트가 사용합니다. "구현", "코딩", "TDD" 등의 요청에 반응합니다.
 ---
 
 # TDD 스킬
 
 이 스킬은 구현 산출물을 작성/점검할 때 필요한 참고 지식을 제공합니다. 프로젝트 파일을 직접 읽거나 쓰지 않습니다 — 그 역할은 호출한 에이전트(보통 `coding`)가 담당하고, 이 스킬은 어떤 절차로, 어떤 기준으로 구현·측정·기록할지를 제공합니다.
 
-출처: [obra/superpowers](https://github.com/obra/superpowers)의 `skills/test-driven-development` 스킬(Iron Law, Red-Green-Refactor 사이클, 합리화 차단표, "좋은 테스트" 원칙, 뮤테이션 체크)을 한국어로 옮기고 TypeScript/jest 예시를 이 프로젝트의 Python 3.14 + `unittest`로 각색한 뒤, 이 프로젝트에서 기존에 쓰던 규칙(품질 게이트, Doxygen 주석, 추적성, 표준 정렬, `ENG-REV-001` 리뷰 절차)과 결합했습니다.
+출처: [obra/superpowers](https://github.com/obra/superpowers)의 `skills/test-driven-development` 스킬(Iron Law, Red-Green-Refactor 사이클, 합리화 차단표, "좋은 테스트" 원칙, 뮤테이션 체크)을 한국어로 옮기고 TypeScript/jest 예시를 이 프로젝트의 Python 3.12 + `unittest`로 각색한 뒤, 이 프로젝트에서 기존에 쓰던 규칙(품질 게이트, Doxygen 주석, 추적성, 표준 정렬, `ENG-REV-001` 리뷰 절차)과 결합했습니다.
 
 ## 참고자료 구성
 

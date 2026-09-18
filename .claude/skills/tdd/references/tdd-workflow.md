@@ -1,6 +1,6 @@
 # TDD 절차 — Iron Law와 Red-Green-Refactor
 
-출처: [obra/superpowers](https://github.com/obra/superpowers) `skills/test-driven-development/SKILL.md`를 한국어로 옮기고 Python 3.14 + `unittest`로 각색했습니다.
+출처: [obra/superpowers](https://github.com/obra/superpowers) `skills/test-driven-development/SKILL.md`를 한국어로 옮기고 Python 3.12 + `unittest`로 각색했습니다.
 
 ## 핵심 원칙
 
