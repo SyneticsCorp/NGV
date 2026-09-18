@@ -2,10 +2,12 @@
 
 기능 요구사항은 텍스트 설명과 함께, 관련 동작/구조를 나타내는 다이어그램을 붙입니다. Markdown 산출물에서는 별도 도구 없이 렌더링되는 **Mermaid** 문법을 우선 사용하고, Mermaid로 표현하기 어려운 SysML 전용 다이어그램(블록 정의도, 내부 블록도 등)은 한계를 명시하고 대안을 제시합니다.
 
+**Use Case 다이어그램의 최종 산출물은 Mermaid가 아니라 `TPL-SWE1-003_Use Case 다이어그램 템플릿.drawio`입니다.** 아래 Mermaid는 초안/검토용이며, 확정되면 `template-policy.md`의 절차에 따라 drawio 파일(`ENG-SWE1-003`)로 옮겨 최종본으로 삼으세요.
+
 ## 다이어그램 유형별 매핑
 
 | 목적 | UML/SysML 다이어그램 | 권장 표현 방법 |
-|---|---|---|
+| --- | --- | --- |
 | 요구사항 자체와 관계(포함/파생/만족/검증) 시각화 | SysML Requirement Diagram | Mermaid `requirementDiagram` (아래 예시) |
 | 액터-시스템 상호작용 개요 | UML Use Case Diagram | Mermaid에 전용 문법 없음 → 텍스트 유스케이스 명세(액터/사전조건/기본흐름/대안흐름) + Mermaid `flowchart`로 액터-유스케이스 관계 근사 |
 | 처리 흐름/알고리즘 | UML Activity Diagram | Mermaid `flowchart` |

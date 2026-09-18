@@ -9,8 +9,8 @@ description: 요구사항 분석 및 요구사항 명세서 작성 시 사용합
 
 ## 참고자료 구성
 
-1. `references/template-policy.md` — 사용자 지정 템플릿 적용 정책(현재 템플릿 미제공 상태에서의 처리 방법 포함).
-2. `references/requirement-schema.md` — 템플릿이 없을 때 사용하는 기본 요구사항 필드 스키마와 ID 체계.
+1. `references/template-policy.md` — 지정 템플릿(`WP_Templates/Engineering/SoftwareRequirementsAnalysis/TPL-SWE1-001·002·003`) 위치, 산출물 ID/파일명 규칙, 작성 방법.
+2. `references/requirement-schema.md` — TPL-SWE1-001의 각 장에 대응하는 작업용 요구사항 필드 스키마와 ID 체계(`SWR-NNNN`).
 3. `references/clarity-and-consistency.md` — EARS 패턴 기반 명확성 확보 방법과 일관성 자체 점검 체크리스트.
 4. `references/uml-sysml-diagrams.md` — 기능 요구사항을 UML/SysML 다이어그램(Mermaid 우선)으로 표현하는 방법.
 5. `references/nfr-iso25010.md` — ISO 25010 품질 특성 기반 비기능 요구사항 작성법과 실행 가능한 검증방안 작성 기준.
@@ -19,8 +19,8 @@ description: 요구사항 분석 및 요구사항 명세서 작성 시 사용합
 
 ## 사용 순서
 
-1. `template-policy.md`로 템플릿 적용 여부를 확인합니다.
-2. 템플릿이 없다면 `requirement-schema.md`의 기본 스키마로 요구사항 항목을 구성합니다.
+1. `template-policy.md`로 지정 템플릿과 산출물 ID 규칙을 확인합니다.
+2. `requirement-schema.md`의 작업용 스키마로 요구사항 항목을 구성합니다.
 3. `clarity-and-consistency.md`의 EARS 패턴으로 모든 요구사항 문장을 작성합니다.
 4. 기능 요구사항은 `uml-sysml-diagrams.md`에 따라 다이어그램을 함께 만듭니다.
 5. 비기능 요구사항은 `nfr-iso25010.md`에 따라 ISO 25010 특성과 실행 가능한 검증방안을 함께 작성합니다.
@@ -31,4 +31,5 @@ description: 요구사항 분석 및 요구사항 명세서 작성 시 사용합
 ## 중요한 한계
 
 - 여기 담긴 ISO 26262 / A-SPICE / ISO 25010 관련 내용은 실무 적용을 돕기 위한 요약이며, 공식 표준 문서 원문을 그대로 옮긴 것이 아닙니다. 인증/계약상 엄밀함이 필요한 경우 공식 표준 문서를 확인해야 합니다.
-- 사용자가 제시하기로 한 템플릿이 아직 없다면, 산출물에 그 사실을 반드시 명시하세요. 템플릿 없이 작성한 산출물을 최종본처럼 다루지 마세요.
+- 지정 템플릿(TPL-SWE1-*)이 실제로 프로젝트에 있는지 매 작업 시작 시 다시 확인하세요 — 경로가 바뀌었거나 새 버전이 등록되었을 수 있습니다(`WP_Templates/PRC-TPL-001_표준 산출물 양식 등록부.xlsx`).
+- `WP_Templates/Engineering/README.md`의 저작권 고지(교육/실습용, 과정 밖 배포·상업적 이용 시 사전 서면승인 필요)를 유의하세요.
