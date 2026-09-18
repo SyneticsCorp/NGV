@@ -28,7 +28,7 @@ class TestIT0034NormalRawInputEndToEnd(unittest.TestCase):
         @case Positive
         @breaks ARC-0001 배선 오류로 정상 입력에서도 오판정이 발생하는 회귀
         """
-        adapter, _orchestrator = buildRealAdapterWithOrchestrator()
+        adapter, orchestrator = buildRealAdapterWithOrchestrator()
         rawInput = buildRawCycleInput(1.000, True, False)
 
         result = adapter.handleCycle(rawInput, 1.000)
@@ -49,7 +49,7 @@ class TestIT0035MissingTimestampRejected(unittest.TestCase):
         @case Negative
         @breaks 누락 필드가 예외로 전체 사이클을 중단시키거나 조용히 무시되고 정상 처리되는 회귀
         """
-        adapter, _orchestrator = buildRealAdapterWithOrchestrator()
+        adapter, orchestrator = buildRealAdapterWithOrchestrator()
         rawInput = buildRawCycleInput(None, True, False)
 
         result = adapter.handleCycle(rawInput, 1.000)
@@ -131,7 +131,7 @@ class TestIT0039MissingSensorFaultFailSafeForcesFault(unittest.TestCase):
         @case Negative
         @breaks sensor_fault 누락이 FALSE로 취급되어 위험 측으로 fail-safe가 적용되는 회귀
         """
-        adapter, _orchestrator = buildRealAdapterWithOrchestrator()
+        adapter, orchestrator = buildRealAdapterWithOrchestrator()
         rawInput = buildRawCycleInput(1.000, True, None)
 
         result = adapter.handleCycle(rawInput, 1.000)
@@ -153,7 +153,7 @@ class TestIT0040SensorFaultTrueFullChainAcceptance(unittest.TestCase):
         @case Negative
         @breaks 전체 체인 기준으로는 fail-freeze/FAULT 통지 중 하나라도 누락되는 회귀
         """
-        adapter, _orchestrator = buildRealAdapterWithOrchestrator()
+        adapter, orchestrator = buildRealAdapterWithOrchestrator()
         normalInput = buildRawCycleInput(1.000, True, False)
         adapter.handleCycle(normalInput, 1.000)
 
@@ -178,7 +178,7 @@ class TestIT0041FreshnessAcceptanceScenario(unittest.TestCase):
         @case Positive
         @breaks 300ms 이내에 DEGRADED가 관측되지 않거나 원시 입력 경로에서 판정이 누락되는 회귀
         """
-        adapter, _orchestrator = buildRealAdapterWithOrchestrator()
+        adapter, orchestrator = buildRealAdapterWithOrchestrator()
         adapter.handleCycle(buildRawCycleInput(0.000, True, False), 0.000)
 
         result = adapter.handleCycle(buildRawCycleInput(None, True, False), 0.250)
