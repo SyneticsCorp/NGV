@@ -212,3 +212,14 @@ Git의 브랜치 정책을 적용해줘. 일반적으로 AI를 활용한 바이�
 ```
 
 **응답 요약:** 저장소가 Public이고 별도 협업자가 없음을 확인 후, 리뷰어 승인 요건을 질문 → 사용자가 "승인 요구 없음, PR+CI만 필수"를 선택(참고로 WP_Templates/OEM_Sample의 저작권 제한과 Public 저장소 노출 가능성도 함께 안내). `.github/workflows/ci.yml`(markdown-lint/python-quality/python-test, `pull_request` 트리거, Python 파일이 아직 없으면 관대하게 건너뜀)을 생성하고, 그동안 로컬에서만 쓰던 lint/품질 설정을 실제 파일로 격상(`.markdownlint-cli2.jsonc`, `.pylintrc` — CLAUDE.md 구현 지침의 camelCase/중복코드 7라인 규칙 반영, `tdd/quality-gates.md`가 이 실제 파일을 가리키도록 수정). 브랜치(`chore/ci-and-branch-policy`)를 만들어 PR #1로 올리고 CI 3개 잡이 실제로 통과하는 것을 확인한 뒤, `gh api`로 main에 브랜치 보호 규칙 적용(PR 필수, 3개 상태체크 필수(strict), 승인 0명, force-push/삭제 금지, 대화 해결 필수, enforce_admins=true — 관리자도 예외 없음). PR #1을 squash 머지하고 로컬 main 동기화. 이제부터 main에 직접 push가 불가능해 PROMPT.md 같은 일상적인 변경도 브랜치+PR을 거쳐야 함(이 로그 기록도 그 방식으로 반영 예정).
+
+---
+
+### Prompt 20
+
+```text
+@OEM_Sample\ 는 고객 요구사양서야. 이 사양서를 기반으로 우리 소프트웨어를 개발할 예정이야. CLAUDE.md와 같이 A-SPICE 기준으로 분석-설계-구현-테스트의 과정을 거치고 산출물을 작성해야 해.
+요구사양서를 분석하고 작업 계획을 제시해줘. 네가 제시한 각 phase 마다 분석~테스트 단계를 거쳐야해. 한 단계가 끝날 때마다 내가 리뷰하고, 리뷰를 승인하면 Git에 Merge해줘. 내가 확인해줘야 하는 것은 한 번에 문의해줘.
+```
+
+**응답 요약:** Plan Mode로 전환해 `OEM-SWR-001_OEM SW 요구사항 사양서.docx`(전자식 차일드락 제어 SW, 교육용 가상 OEM 시나리오) 전체를 Explore 에이전트로 정독 — 요구사항 13건(안전 ASIL B 4건, 기능 QM 7건, 비기능 QM 2건), 외부 인터페이스 9건, 추적성 매핑(자사 SWR-001~021 힌트), 인도 게이트 G1~G4(요구/설계/구현·통합/검증 — 우리 서브에이전트 체인과 1:1 대응), "Python 3.12 PC/SIL" 명시, 문서 전체가 "실제 승인/ASIL/인증을 나타내지 않는 품질교육용 가상 산출물"임을 재확인. 요구사항을 우선순위 사슬(충돌>접근위험억제>화재등강제해제>ISOFIX>자동잠금>ignition해제>운전자명령)에 따라 5개 Phase(①안전커널+아키텍처기초 ②안전긴급대응 ③차량상태자동제어+ISOFIX ④운전자명령/HMI ⑤횡단관심사-결정론/로깅)로 분해하는 계획을 설계. 사용자에게 (1)리뷰 단위(Phase 단위 vs 게이트별 세분화) (2)Python 버전(OEM문서 3.12 vs CLAUDE.md 3.14) 두 가지를 한 번에 질문 → "Phase 단위 5회 리뷰", "OEM의 3.12 따름"으로 확정. 최종 계획을 plan 파일에 작성 후 ExitPlanMode로 승인받음. 승인 직후 사전 작업 착수: 조사 중 실수로 생성된 `OEM_Sample/_extracted_dump.txt` 삭제, `CLAUDE.md`/`ci.yml`/`.pylintrc`/`tdd`·`detailed-design` 스킬 전반의 "Python 3.14"를 "3.12"로 일괄 수정(겸사겸사 "Pyhton" 오타도 수정), markdownlint 통과 확인. 아직 커밋/푸시는 하지 않음 — 이 변경을 작은 PR로 만들고, 이후 Phase 1(요구사항 분석→아키텍처설계→상세설계→구현→통합테스트→시스템테스트)을 브랜치+PR로 진행할 예정.
