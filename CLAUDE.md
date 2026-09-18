@@ -16,6 +16,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - 이 프로젝트는 **반드시** 분석, 설계, 구현, 테스트의 순서로 개발을 진행한다.
 - 각 단계가 완료되었을 때, 지정된 탬플릿을 이용한 산출물이 생성되어야 한다.
+- "설계"는 아키텍처 설계(architecture-designer) → 상세설계(detailed-designer) 순으로 진행한다.
+- "테스트"는 단위 테스트(coding 서브에이전트가 구현과 함께 TDD로 수행) → 통합 테스트(integration-tester) → 시스템 테스트(sw-system-tester) 순으로 진행한다.
 
 ### 분석 지침
 
@@ -24,6 +26,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 아키텍처 설계 지침
 
 - 아키텍처 설계 단계 수행은 architecture-designer 서브에이전트가 담당한다.
+
+### 상세설계 지침
+
+- 상세설계 단계 수행은 detailed-designer 서브에이전트가 담당한다.
 
 ### 구현 지침
 
@@ -35,3 +41,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - 중복 코드는 7라인까지 허용한다.
   - 주석은 Doxygen 방식으로 작성하며, 20% 이상 작성해야 한다.
 - 함수명, 변수명은 3글자 이상 사용하고, 낙타 표기법을 활용한다.
+
+### 통합 테스트 지침
+
+- 소프트웨어 통합 테스트 단계 수행은 integration-tester 서브에이전트가 담당한다(SWE.5).
+- 테스트 베이시스는 아키텍처 설계서의 인터페이스 명세와 통합 순서이며, 요구사항 명세서가 아니다.
+- 시험 설계기법은 ISO 26262 Part 6에 근거한다.
+- 함수 커버리지와 Call 커버리지를 **반드시** 100% 달성해야 한다.
+
+### 시스템 테스트 지침
+
+- 소프트웨어 시스템 테스트(검증) 단계 수행은 sw-system-tester 서브에이전트가 담당한다(SWE.6).
+- 테스트 베이시스는 요구사항 명세서이며, 아키텍처 설계서가 아니다.
+- 기능 요구사항과 비기능 요구사항을 모두 다루며, 비기능 테스트 케이스는 ISO 25000 품질 특성별로 구분한다.
+
+### 산출물 감사 지침
+
+- 각 단계 산출물의 A-SPICE 4.1 CL2 수준 점검은 aspice-cl2-auditor 서브에이전트가 담당한다.
+- 특정 개발 단계에 속하지 않고, 산출물 점검이 필요할 때마다 호출한다.

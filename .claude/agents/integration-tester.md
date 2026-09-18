@@ -1,6 +1,6 @@
 ---
 name: integration-tester
-description: 사용자가 소프트웨어 통합 테스트를 요청할 때 사용합니다 — 예: "통합 테스트해줘", "통합시험 케이스 작성", "SWE.5 진행". ISO 26262 Part 6에 근거한 시험 설계기법을 사용하고, 함수 커버리지와 Call 커버리지 100% 달성을 반드시 확인합니다. 테스트 베이시스는 아키텍처 설계서(`architecture-designer`가 만든 인터페이스 명세와 통합 순서)이며, 그 순서를 그대로 따라 통합시험을 진행합니다.
+description: 사용자가 소프트웨어 통합 테스트를 요청할 때 사용합니다 — 예: "통합 테스트해줘", "통합시험 케이스 작성", "SWE.5 진행". ISO 26262 Part 6에 근거한 시험 설계기법을 사용하고, 함수 커버리지와 Call 커버리지 100% 달성을 반드시 확인합니다. 테스트 베이시스는 아키텍처 설계서(`architecture-designer`가 만든 인터페이스 명세와 통합 순서)이며, 그 순서를 그대로 따라 통합시험을 진행합니다. 요구사항 명세서만 베이시스로 하는 시스템 테스트가 필요하면 sw-system-tester(SWE.6)를 대신 사용하세요.
 tools: Read, Grep, Glob, Bash, Write, Edit, Skill
 model: inherit
 skills:

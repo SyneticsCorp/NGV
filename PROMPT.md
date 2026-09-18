@@ -152,3 +152,23 @@ TDD 스킬을 다음 링크의 TDD 스킬로 변경해줘. 단, 기존 스킬에
 ```
 
 **응답 요약:** 앞선 스킬들과 동일한 방식으로 먼저 서브에이전트를 통해 실제 통합시험 템플릿(TPL-SWE5-001 SW 통합전략 및 통합시험 명세서, TPL-SWE5-002 통합시험 케이스 xlsx, TPL-SWE5-003 통합시험 결과서 xlsx)을 조사. TPL-SWE5-001은 14장 구조(통합원칙/통합항목과순서/환경형상/진입종료기준/케이스요약/시험설계기법/실행결과기록/회귀전략/실패편차처리/추적성과보고/적용한계/추적성 등)이며 "커버리지 기준" 전용 절은 없어(7장 시험설계기법이 최근접) 함수/Call 커버리지 100%를 5장(종료 기준)에 명시하도록 설계. TPL-SWE5-002(Integration Cases: Test ID/Trace/Integration Item/Stimulus/Expected Result/Technique/Automation)와 TPL-SWE5-003(Integration Results, Run Summary) 시트 구조도 확인. `.claude/agents/integration-tester.md`와 `.claude/skills/integration-testing/`(SKILL.md + references 7종: template-policy, test-basis-and-order(아키텍처 인터페이스·통합순서를 테스트 베이시스로 강제), test-design-techniques(ISO 26262 Part 6 기법 + 오류주입시험), coverage-criteria(함수/Call 커버리지 100%를 coverage.py+AST로 실측하는 구체적 방법, 100% 미달 시 처리), traceability-and-integration(TRC-001 SWE.5 열), results-and-regression, iso26262-aspice-alignment)을 생성. `IT-NNNN` 케이스 ID 체계를 새로 도입해 `SWR-`/`ARC-`/`IU-`와 나란히 연결. 작업 도중 사용자가 프로젝트에 `sw-system-test` 스킬과 `sw-system-tester` 서브에이전트(SWE.6 시스템 테스트, 요구사항 명세서 기반, ISO 29119/ISTQB/ISO 25000/PICT 도구)를 직접 추가한 것을 발견 — 범위가 겹치지 않음(SWE.5=아키텍처 기반, SWE.6=요구사항 기반)을 확인하고 integration-testing SKILL.md에 상호 참조만 추가, 별도 수정 없이 그대로 둠. markdownlint 정리 완료.
+
+---
+
+### Prompt 14
+
+```text
+커밋하고 푸시해
+```
+
+**응답 요약:** `integration-tester`/`integration-testing` 신규분과 사용자가 직접 추가한 `sw-system-test`/`sw-system-tester`를 함께 커밋 후 origin/main에 푸시(`02279c0`).
+
+---
+
+### Prompt 15
+
+```text
+새로 추가한 서브에이전트와 스킬 인식해줘. 서브에이전트와 각 서브에이전트에서 사용하는 스킬의 경계를 명확히 정리해줘. 서로 중복되는 내용이 없도록 만들어줘.
+```
+
+**응답 요약:** 사용자가 직접 추가한 `sw-system-tester`/`sw-system-test`(SWE.6)를 포함해 전체 7개 서브에이전트+스킬 쌍을 감사. (1) `sw-system-test`가 다른 스킬들과 달리 실제 회사 템플릿(TPL-SWE6-001/002)에 근거하지 않고 있어, 서브에이전트로 조사 — 단일 시트(Verification Specification: Test ID/SW Req/Level·Environment/Stimulus/Expected Result/Technique/Execution)이며 기능/비기능 구분 전용 컬럼이 없음을 확인(사용자 초안은 별도 시트로 가정했으나 실제와 다름). (2) `sw-system-test`를 다른 스킬과 동일한 SKILL.md+references 구조로 재구성(template-policy, test-design-techniques, nfr-verification, traceability-and-integration, writing-principles, iso26262-aspice-alignment 6종) — ISO 25010 품질특성 표(requirements-analysis의 nfr-iso25010.md가 원본)와 기본 테스트기법 정의(tdd/integration-testing이 원본)를 다시 나열하지 않고 참조만 하도록 정리해 중복 제거. 시스템 테스트 케이스 ID `ST-FUNC-`/`ST-NFR-<특성약어>-`를 신규 도입(특성약어표는 이 스킬에서 처음 정의한 것임을 명시). (3) `sw-system-tester` 에이전트에 `skills:` 프런트매터 필드 추가, 실제 템플릿/ID 체계 반영, "아키텍처 기반 테스트는 integration-tester로" 경계 문구 추가, `integration-tester`에도 "요구사항 기반은 sw-system-tester로" 역참조 추가. (4) CLAUDE.md에 빠져 있던 "상세설계 지침"/"통합 테스트 지침"/"시스템 테스트 지침"/"산출물 감사 지침" 절을 기존 분석/설계/구현 지침과 같은 형식으로 추가하고, 개발 생명주기에 설계(아키텍처→상세)·테스트(단위→통합→시스템) 세부 순서를 명시해 전체 파이프라인 경계를 한 곳에서 확인 가능하게 함. 전체 60개 마크다운 파일 markdownlint 통과 확인. 아직 커밋/푸시는 하지 않음(사용자 요청 대기).
