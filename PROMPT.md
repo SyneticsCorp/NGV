@@ -111,4 +111,24 @@ A-SPICE 4.1 버전 기준으로 CL2 수준의 산출물을 점검하는 스킬 �
 상세설계를 위한 서브에이전트와 스킬 초안도 만들어줘
 ```
 
-**응답 요약:** 앞선 두 스킬과 동일한 방식으로, 먼저 서브에이전트를 통해 실제 상세설계 템플릿(TPL-SWE3-001 SW 상세설계서, TPL-SWE3-002 상세설계 UML/호출관계 drawio, TPL-SBOM-001 Python 의존성 SBOM/FOSS 라이선스 xlsx)을 조사. TPL-SWE3-001은 15장 구조(모듈분해/호출관계/공통자료형/함수계약/알고리즘/정책결정표/상태전이/Web·API/오류방어/코딩·검증규칙/단위-요구사항할당/구현경계/추적성 등)이며 고정 표는 문서 메타/변경이력/승인상태 3개뿐임을 확인. TPL-SBOM-001은 SBOM/FOSS Review/Change History 3개 시트, 헤더 9행·데이터 10행부터인 동일 관례를 확인. 이 결과를 바탕으로 `.claude/agents/detailed-designer.md`와 `.claude/skills/detailed-design/`(SKILL.md + references 7종: template-policy, design-schema(구현단위 ID `IU-NNNN`), coding-and-verification-rules(코딩표준 미지정 시 확인 후 제안하는 절차, Python 추정 시 기본안), sbom-foss-compliance(TPL-SBOM-001 컬럼별 작성 규칙, 근거 없는 "적합" 판정 금지), detailed-design-diagrams(Mermaid→drawio), traceability-and-integration(ARC-아키텍처/SWR-요구사항/단위시험과의 연결, TRC-001 Detailed Design 열), iso26262-aspice-alignment)를 생성. requirements-analysis/architecture-design/aspice-auditor와 ID 체계·추적성을 상호 연결. markdownlint 정리 완료, 아직 커밋/푸시는 하지 않음(사용자 요청 대기).
+**응답 요약:** 앞선 두 스킬과 동일한 방식으로, 먼저 서브에이전트를 통해 실제 상세설계 템플릿(TPL-SWE3-001 SW 상세설계서, TPL-SWE3-002 상세설계 UML/호출관계 drawio, TPL-SBOM-001 Python 의존성 SBOM/FOSS 라이선스 xlsx)을 조사. TPL-SWE3-001은 15장 구조(모듈분해/호출관계/공통자료형/함수계약/알고리즘/정책결정표/상태전이/Web·API/오류방어/코딩·검증규칙/단위-요구사항할당/구현경계/추적성 등)이며 고정 표는 문서 메타/변경이력/승인상태 3개뿐임을 확인. TPL-SBOM-001은 SBOM/FOSS Review/Change History 3개 시트, 헤더 9행·데이터 10행부터인 동일 관례를 확인. 이 결과를 바탕으로 `.claude/agents/detailed-designer.md`와 `.claude/skills/detailed-design/`(SKILL.md + references 7종: template-policy, design-schema(구현단위 ID `IU-NNNN`), coding-and-verification-rules(코딩표준 미지정 시 확인 후 제안하는 절차, Python 추정 시 기본안), sbom-foss-compliance(TPL-SBOM-001 컬럼별 작성 규칙, 근거 없는 "적합" 판정 금지), detailed-design-diagrams(Mermaid→drawio), traceability-and-integration(ARC-아키텍처/SWR-요구사항/단위시험과의 연결, TRC-001 Detailed Design 열), iso26262-aspice-alignment)를 생성. requirements-analysis/architecture-design/aspice-auditor와 ID 체계·추적성을 상호 연결. markdownlint 정리 완료.
+
+---
+
+### Prompt 10
+
+```text
+커밋하고 푸시해
+```
+
+**응답 요약:** `detailed-designer`/`detailed-design` 스킬과 `PROMPT.md` 갱신분을 커밋 후 origin/main에 푸시(`2ca9cb3`).
+
+---
+
+### Prompt 11
+
+```text
+구현에 대한 서브 에이전트와 스킬도 만들어줘. @CLAUDE.md 의 구현 지침을 준수하는 스킬을 생성한다.
+```
+
+**응답 요약:** 먼저 전체 템플릿 등록부와 인스펙션 템플릿(TPL-REV-001)을 조사하는 서브에이전트를 실행했으나 세션 종료로 중단됨. 이후 사용자가 CLAUDE.md에 "구현 지침"을 직접 추가(서브에이전트명은 반드시 `coding`, TDD 방식과 "TDD 스킬" 사용 필수, Python 3.14/unittest, 품질 지표 4종 — 함수 순수코드라인 ≤50, 순환복잡도 ≤10, 중복코드 7라인까지 허용, Doxygen 주석 20% 이상 — 및 3자 이상 camelCase 네이밍). "Exited Auto Mode"로 전환되어, 품질 측정에 쓸 오픈소스 도구를 질문 → 사용자가 "radon + pylint 조합(추천)"을 선택. 이후 Plan Mode로 전환되어(`C:\Users\hando\.claude\plans\atomic-swimming-meteor.md`) 직접 Glob/xlsx 조사로 "구현" 전용 문서 템플릿은 없고 `TPL-REV-001_단계별 인스펙션 결과 템플릿`(Common/SUP.1, Inspection Sessions/Findings/Change History 3시트)이 단계 완료 리뷰 산출물임을 확인 후 계획 승인받아 실행. `.claude/agents/coding.md`(name: coding 고정)와 `.claude/skills/tdd/`(SKILL.md + references 6종: template-policy(ENG-REV-001), tdd-workflow(unittest Red-Green-Refactor), quality-gates(radon/pylint 실측 명령과 4대 지표 임계값, camelCase용 .pylintrc 설정), doxygen-comments(Python Doxygen 주석 형식), traceability-and-integration(TRC-001 Code/SWE.4 열), iso26262-aspice-alignment)을 생성. 기존 `detailed-design`의 `coding-and-verification-rules.md`(및 SKILL.md 한계 섹션)를 "PEP8/snake_case 제안" 잠정안에서 CLAUDE.md로 확정된 표준(camelCase 등)을 가리키도록 갱신해 충돌 해소. markdownlint 정리 완료, 아직 커밋/푸시는 하지 않음(사용자 요청 대기). CLAUDE.md의 "Pyhton" 오타는 사용자 파일이라 수정하지 않고 완료 보고 시에만 언급하기로 함.
