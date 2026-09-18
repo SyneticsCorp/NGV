@@ -10,7 +10,7 @@ ASIL B 관련 게이트 경로이므로 오류 주입으로 검증한다.
 
 import unittest
 
-from it_helpers import ArbitrationCommand, SystemState, buildStateResult
+from tests_integration.it_helpers import ArbitrationCommand, SystemState, buildStateResult
 from ngv.core.command_arbiter import CommandArbiter
 
 

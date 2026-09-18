@@ -10,7 +10,7 @@ SWR-013a)이 인터페이스 경계에서 실제로 성립하는지에 초점을
 
 import unittest
 
-from it_helpers import validField, invalidField
+from tests_integration.it_helpers import validField, invalidField
 from ngv.core.freshness_monitor import FreshnessMonitor
 
 

@@ -13,7 +13,7 @@ IF-0006->IF-0007->IF-0008->IF-0009->IF-0010->IF-0007(경고)->IF-0011->IF-0012 �
 
 import unittest
 
-from it_helpers import (
+from tests_integration.it_helpers import (
     RaisingDecisionLogger,
     RaisingFreshnessMonitor,
     RaisingNotificationAdapter,

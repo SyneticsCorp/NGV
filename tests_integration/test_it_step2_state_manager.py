@@ -8,7 +8,7 @@
 
 import unittest
 
-from it_helpers import (
+from tests_integration.it_helpers import (
     SystemState,
     buildFreshnessResult,
     invalidField,

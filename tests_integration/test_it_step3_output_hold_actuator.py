@@ -8,7 +8,7 @@
 
 import unittest
 
-from it_helpers import ArbitrationCommand, SystemState, buildArbitrationResult, buildStateResult
+from tests_integration.it_helpers import ArbitrationCommand, SystemState, buildArbitrationResult, buildStateResult
 from ngv.core.output_hold_actuator import OutputHoldActuator
 from ngv.domain.types import LockCommand
 
