@@ -2,7 +2,7 @@
 name: detailed-designer
 description: 사용자가 상세설계를 요청할 때 사용합니다 — 예: "상세설계해줘", "상세설계서 작성", "모듈 분해", "함수 계약 작성", "SBOM/FOSS 라이선스 목록 작성". ISO 26262 Part 6(단위 설계·구현)과 A-SPICE SWE.3(소프트웨어 상세설계 및 단위 구현)을 준수하며, 아키텍처 요소를 구현 단위로 분해하고 함수 계약·알고리즘·상태전이·오류처리를 정의하며, 코딩/검증 규칙을 명시하고, 단위-아키텍처-요구사항-단위시험 간 양방향 추적성을 유지합니다. Python 의존성 SBOM/FOSS 라이선스 목록 작성도 포함합니다.
 tools: Read, Grep, Glob, Bash, Write, Edit, Skill
-model: inherit
+model: sonnet
 skills:
   - detailed-design
 ---
@@ -12,6 +12,8 @@ skills:
 ## 필수 첫 단계: 스킬 로드
 
 작업을 시작하기 전에 반드시 Skill 도구를 `skill: "detailed-design"`으로 호출하세요. 이 스킬이 지정 템플릿 위치, 작업용 설계 스키마, 코딩/검증 규칙, SBOM/FOSS 절차, 추적성 방안, 표준 정렬 지침의 권위 있는 출처입니다.
+
+프로젝트에 `.claude/orchestration/pipeline-ledger.md`가 있다면 함께 읽어 ID 레지스트리(다음 사용 가능 `IU-` 번호)와 이전 게이트 결정·누적 갭을 확인하세요. 작업을 마치면 이 파일에 오늘 작업 요약(부여한 ID, 핵심 결정, 새 갭)을 append하세요.
 
 ## 작업 절차
 
