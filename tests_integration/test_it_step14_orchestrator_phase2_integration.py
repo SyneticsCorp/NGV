@@ -16,21 +16,15 @@ from tests_integration.it_helpers import (
     buildPhase2RawCycleInput,
     buildRealAdapterWithOrchestrator,
     buildRealOrchestrator,
+    buildRecordedBaseCollaboratorsKwargs,
     recordCalls,
     validField,
 )
-from ngv.adapters.decision_logger_stub import DecisionLoggerStub
-from ngv.adapters.notification_adapter import NotificationAdapter
-from ngv.adapters.output_actuator_adapter import OutputActuatorAdapter
 from ngv.app.safety_kernel_orchestrator import SafetyKernelOrchestrator
 from ngv.core.approach_risk_evaluator import ApproachRiskEvaluator
 from ngv.core.approach_risk_override_manager import ApproachRiskOverrideManager
-from ngv.core.command_arbiter import CommandArbiter
 from ngv.core.crash_monitor import CrashMonitor
 from ngv.core.fire_overtemp_occupant_monitor import FireOvertempOccupantMonitor
-from ngv.core.freshness_monitor import FreshnessMonitor
-from ngv.core.output_hold_actuator import OutputHoldActuator
-from ngv.core.state_manager import StateManager
 from ngv.domain.types import LockCommand
 
 
@@ -171,13 +165,7 @@ class TestIT0087FixedCallOrderAcrossPhase2RealComponents(unittest.TestCase):
         """
         callLog = []
         orchestrator = SafetyKernelOrchestrator(
-            freshnessMonitor=recordCalls(FreshnessMonitor(), "evaluate", "IF-0006", callLog),
-            stateManager=recordCalls(StateManager(), "evaluate", "IF-0007", callLog),
-            outputHoldActuator=recordCalls(OutputHoldActuator(), "confirm", "IF-0009", callLog),
-            commandArbiter=recordCalls(CommandArbiter(), "arbitrate", "IF-0008", callLog),
-            outputAdapter=recordCalls(OutputActuatorAdapter(), "publish", "IF-0010", callLog),
-            notificationAdapter=recordCalls(NotificationAdapter(), "publishWarning", "IF-0011", callLog),
-            decisionLogger=recordCalls(DecisionLoggerStub(), "log", "IF-0012", callLog),
+            **buildRecordedBaseCollaboratorsKwargs(callLog),
             crashMonitor=recordCalls(CrashMonitor(), "evaluate", "IF-0016", callLog),
             approachRiskEvaluator=recordCalls(ApproachRiskEvaluator(), "evaluate", "IF-0017", callLog),
             overrideManager=recordCalls(ApproachRiskOverrideManager(), "decide", "IF-0018", callLog),

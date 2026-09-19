@@ -21,9 +21,9 @@ from tests_integration.it_helpers import (
     SystemState,
     buildNormalizedInput,
     buildRealOrchestrator,
+    buildRecordedBaseCollaboratorsKwargs,
     captureReturn,
     invalidField,
-    recordCalls,
     validField,
 )
 from ngv.adapters.decision_logger_stub import DecisionLoggerStub
@@ -161,13 +161,7 @@ class TestIT0029FixedCallOrderAcrossRealComponents(unittest.TestCase):
         """
         callLog = []
         orchestrator = SafetyKernelOrchestrator(
-            freshnessMonitor=recordCalls(FreshnessMonitor(), "evaluate", "IF-0006", callLog),
-            stateManager=recordCalls(StateManager(), "evaluate", "IF-0007", callLog),
-            outputHoldActuator=recordCalls(OutputHoldActuator(), "confirm", "IF-0009", callLog),
-            commandArbiter=recordCalls(CommandArbiter(), "arbitrate", "IF-0008", callLog),
-            outputAdapter=recordCalls(OutputActuatorAdapter(), "publish", "IF-0010", callLog),
-            notificationAdapter=recordCalls(NotificationAdapter(), "publishWarning", "IF-0011", callLog),
-            decisionLogger=recordCalls(DecisionLoggerStub(), "log", "IF-0012", callLog),
+            **buildRecordedBaseCollaboratorsKwargs(callLog),
             **buildPhase2Collaborators(),
         )
         cycleInput = buildNormalizedInput(validField(1.000), validField(True), validField(False))

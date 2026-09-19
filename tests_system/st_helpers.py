@@ -21,20 +21,10 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from ngv.adapters.decision_logger_stub import DecisionLoggerStub
 from ngv.adapters.input_validation_adapter import InputValidationAdapter
-from ngv.adapters.notification_adapter import NotificationAdapter
-from ngv.adapters.output_actuator_adapter import OutputActuatorAdapter
-from ngv.app.safety_kernel_orchestrator import SafetyKernelOrchestrator
-from ngv.core.approach_risk_evaluator import ApproachRiskEvaluator
-from ngv.core.approach_risk_override_manager import ApproachRiskOverrideManager
-from ngv.core.command_arbiter import CommandArbiter
-from ngv.core.crash_monitor import CrashMonitor
-from ngv.core.fire_overtemp_occupant_monitor import FireOvertempOccupantMonitor
-from ngv.core.freshness_monitor import FreshnessMonitor
-from ngv.core.output_hold_actuator import OutputHoldActuator
-from ngv.core.state_manager import StateManager
 from ngv.domain.types import LockCommand, RawCycleInput, SystemState
+
+from testsupport.orchestrator_factory import buildOrchestrator
 
 
 def buildRawInput(rawSourceTimestamp, rawIgnitionOn, rawSensorFault):
@@ -74,19 +64,7 @@ def buildSystemUnderTest():
 
     @return InputValidationAdapter — handleCycle(rawCycleInput, nowS)로 자극을 주입하는 진입점
     """
-    orchestrator = SafetyKernelOrchestrator(
-        freshnessMonitor=FreshnessMonitor(),
-        stateManager=StateManager(),
-        outputHoldActuator=OutputHoldActuator(),
-        commandArbiter=CommandArbiter(),
-        outputAdapter=OutputActuatorAdapter(),
-        notificationAdapter=NotificationAdapter(),
-        decisionLogger=DecisionLoggerStub(),
-        crashMonitor=CrashMonitor(),
-        approachRiskEvaluator=ApproachRiskEvaluator(),
-        overrideManager=ApproachRiskOverrideManager(),
-        fireMonitor=FireOvertempOccupantMonitor(),
-    )
+    orchestrator = buildOrchestrator()
     return InputValidationAdapter(orchestrator)
 
 

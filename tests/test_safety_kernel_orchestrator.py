@@ -32,6 +32,8 @@ from ngv.adapters.notification_adapter import NotificationAdapter
 from ngv.adapters.output_actuator_adapter import OutputActuatorAdapter
 from ngv.app.safety_kernel_orchestrator import SafetyKernelOrchestrator
 
+from testsupport.orchestrator_factory import buildOrchestrator
+
 
 def validField(value):
     """테스트 헬퍼 — 유효한 FieldValidationResult를 만든다."""
@@ -72,23 +74,6 @@ def normalizedInput(
         if value is not None:
             kwargs[name] = value
     return NormalizedSafetyInput(**kwargs)
-
-
-def buildOrchestrator():
-    """테스트 헬퍼 — 실제(real) 협력 객체(Phase1+Phase2)로 구성된 오케스트레이터를 만든다."""
-    return SafetyKernelOrchestrator(
-        freshnessMonitor=FreshnessMonitor(),
-        stateManager=StateManager(),
-        outputHoldActuator=OutputHoldActuator(),
-        commandArbiter=CommandArbiter(),
-        outputAdapter=OutputActuatorAdapter(),
-        notificationAdapter=NotificationAdapter(),
-        decisionLogger=DecisionLoggerStub(),
-        crashMonitor=CrashMonitor(),
-        approachRiskEvaluator=ApproachRiskEvaluator(),
-        overrideManager=ApproachRiskOverrideManager(),
-        fireMonitor=FireOvertempOccupantMonitor(),
-    )
 
 
 def recordCalls(instance, methodName, tag, callLog):
@@ -193,7 +178,7 @@ class TestSafetyKernelOrchestratorEvaluateCycleNormalPath(unittest.TestCase):
         outputAdapter = recordCalls(OutputActuatorAdapter(), "publish", "IU-0006", callLog)
         notificationAdapter = recordCalls(NotificationAdapter(), "publishWarning", "IU-0007", callLog)
         decisionLogger = recordCalls(DecisionLoggerStub(), "log", "IU-0008", callLog)
-        orchestrator = SafetyKernelOrchestrator(
+        orchestrator = buildOrchestrator(
             freshnessMonitor=freshnessMonitor,
             stateManager=stateManager,
             outputHoldActuator=outputHoldActuator,
@@ -243,19 +228,7 @@ class TestSafetyKernelOrchestratorEvaluateCycleNormalPath(unittest.TestCase):
             return originalArbitrate(stateResult, inputValid, candidateCommands)
 
         commandArbiter.arbitrate = spyArbitrate
-        orchestrator = SafetyKernelOrchestrator(
-            freshnessMonitor=FreshnessMonitor(),
-            stateManager=StateManager(),
-            outputHoldActuator=OutputHoldActuator(),
-            commandArbiter=commandArbiter,
-            outputAdapter=OutputActuatorAdapter(),
-            notificationAdapter=NotificationAdapter(),
-            decisionLogger=DecisionLoggerStub(),
-            crashMonitor=CrashMonitor(),
-            approachRiskEvaluator=ApproachRiskEvaluator(),
-            overrideManager=ApproachRiskOverrideManager(),
-            fireMonitor=FireOvertempOccupantMonitor(),
-        )
+        orchestrator = buildOrchestrator(commandArbiter=commandArbiter)
         input1 = normalizedInput(invalidField(None), validField(True), validField(False))
 
         orchestrator.evaluateCycle(input1, 1.000)
@@ -273,19 +246,7 @@ class TestSafetyKernelOrchestratorEvaluateCycleErrorHandling(unittest.TestCase):
         @case Negative — 10.2절 방어적 정책(강제 FAULT, errorOccurred=True)을 검증
         @breaks 하위 컴포넌트 예외가 evaluateCycle() 밖으로 전파되는 회귀(안전 커널 전체 중단)
         """
-        orchestrator = SafetyKernelOrchestrator(
-            freshnessMonitor=RaisingFreshnessMonitor(),
-            stateManager=StateManager(),
-            outputHoldActuator=OutputHoldActuator(),
-            commandArbiter=CommandArbiter(),
-            outputAdapter=OutputActuatorAdapter(),
-            notificationAdapter=NotificationAdapter(),
-            decisionLogger=DecisionLoggerStub(),
-            crashMonitor=CrashMonitor(),
-            approachRiskEvaluator=ApproachRiskEvaluator(),
-            overrideManager=ApproachRiskOverrideManager(),
-            fireMonitor=FireOvertempOccupantMonitor(),
-        )
+        orchestrator = buildOrchestrator(freshnessMonitor=RaisingFreshnessMonitor())
         input1 = normalizedInput(validField(1.000), validField(True), validField(False))
 
         result = orchestrator.evaluateCycle(input1, 1.000)
@@ -303,18 +264,10 @@ class TestSafetyKernelOrchestratorEvaluateCycleErrorHandling(unittest.TestCase):
         @case Negative — 발행 실패가 이미 확정된 안전 출력을 무효화하지 않는지 검증
         @breaks 발행 단계 예외가 evaluateCycle() 밖으로 전파되거나 판정 결과를 훼손하는 회귀
         """
-        orchestrator = SafetyKernelOrchestrator(
-            freshnessMonitor=FreshnessMonitor(),
-            stateManager=StateManager(),
-            outputHoldActuator=OutputHoldActuator(),
-            commandArbiter=CommandArbiter(),
+        orchestrator = buildOrchestrator(
             outputAdapter=RaisingOutputActuatorAdapter(),
             notificationAdapter=RaisingNotificationAdapter(),
             decisionLogger=RaisingDecisionLogger(),
-            crashMonitor=CrashMonitor(),
-            approachRiskEvaluator=ApproachRiskEvaluator(),
-            overrideManager=ApproachRiskOverrideManager(),
-            fireMonitor=FireOvertempOccupantMonitor(),
         )
         input1 = normalizedInput(validField(1.000), validField(True), validField(False))
 

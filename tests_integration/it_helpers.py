@@ -19,12 +19,7 @@ from ngv.adapters.decision_logger_stub import DecisionLoggerStub
 from ngv.adapters.input_validation_adapter import InputValidationAdapter
 from ngv.adapters.notification_adapter import NotificationAdapter
 from ngv.adapters.output_actuator_adapter import OutputActuatorAdapter
-from ngv.app.safety_kernel_orchestrator import SafetyKernelOrchestrator
-from ngv.core.approach_risk_evaluator import ApproachRiskEvaluator
-from ngv.core.approach_risk_override_manager import ApproachRiskOverrideManager
 from ngv.core.command_arbiter import CommandArbiter
-from ngv.core.crash_monitor import CrashMonitor
-from ngv.core.fire_overtemp_occupant_monitor import FireOvertempOccupantMonitor
 from ngv.core.freshness_monitor import FreshnessMonitor
 from ngv.core.output_hold_actuator import OutputHoldActuator
 from ngv.core.state_manager import StateManager
@@ -41,6 +36,8 @@ from ngv.domain.types import (
     StateResult,
     SystemState,
 )
+
+from testsupport.orchestrator_factory import buildOrchestrator
 
 
 def validField(value):
@@ -148,19 +145,23 @@ def buildRealOrchestrator():
     """!
     @brief 6단계 통합 대상 — ARC-0002~0008 실물로 구성한 오케스트레이터(mock 미사용).
     """
-    return SafetyKernelOrchestrator(
-        freshnessMonitor=FreshnessMonitor(),
-        stateManager=StateManager(),
-        outputHoldActuator=OutputHoldActuator(),
-        commandArbiter=CommandArbiter(),
-        outputAdapter=OutputActuatorAdapter(),
-        notificationAdapter=NotificationAdapter(),
-        decisionLogger=DecisionLoggerStub(),
-        crashMonitor=CrashMonitor(),
-        approachRiskEvaluator=ApproachRiskEvaluator(),
-        overrideManager=ApproachRiskOverrideManager(),
-        fireMonitor=FireOvertempOccupantMonitor(),
-    )
+    return buildOrchestrator()
+
+
+def buildRecordedBaseCollaboratorsKwargs(callLog):
+    """!
+    @brief IF-0006~IF-0012 기본 7개 협력 객체를 recordCalls로 감싸 kwargs로 반환한다
+           (여러 통합시험 파일이 공통으로 쓰는 고정 태그 — 중복 코드 제거).
+    """
+    return {
+        "freshnessMonitor": recordCalls(FreshnessMonitor(), "evaluate", "IF-0006", callLog),
+        "stateManager": recordCalls(StateManager(), "evaluate", "IF-0007", callLog),
+        "outputHoldActuator": recordCalls(OutputHoldActuator(), "confirm", "IF-0009", callLog),
+        "commandArbiter": recordCalls(CommandArbiter(), "arbitrate", "IF-0008", callLog),
+        "outputAdapter": recordCalls(OutputActuatorAdapter(), "publish", "IF-0010", callLog),
+        "notificationAdapter": recordCalls(NotificationAdapter(), "publishWarning", "IF-0011", callLog),
+        "decisionLogger": recordCalls(DecisionLoggerStub(), "log", "IF-0012", callLog),
+    }
 
 
 def buildRealAdapterWithOrchestrator():

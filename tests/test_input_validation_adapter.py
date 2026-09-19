@@ -12,18 +12,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from ngv.domain.types import CrashStatus, RawCycleInput, SystemState
 from ngv.adapters.input_validation_adapter import InputValidationAdapter
-from ngv.adapters.decision_logger_stub import DecisionLoggerStub
-from ngv.adapters.notification_adapter import NotificationAdapter
-from ngv.adapters.output_actuator_adapter import OutputActuatorAdapter
-from ngv.core.approach_risk_evaluator import ApproachRiskEvaluator
-from ngv.core.approach_risk_override_manager import ApproachRiskOverrideManager
-from ngv.core.command_arbiter import CommandArbiter
-from ngv.core.crash_monitor import CrashMonitor
-from ngv.core.fire_overtemp_occupant_monitor import FireOvertempOccupantMonitor
-from ngv.core.freshness_monitor import FreshnessMonitor
-from ngv.core.output_hold_actuator import OutputHoldActuator
-from ngv.core.state_manager import StateManager
-from ngv.app.safety_kernel_orchestrator import SafetyKernelOrchestrator
+
+from testsupport.orchestrator_factory import buildOrchestrator as buildRealOrchestrator
 
 
 class TestValidateTimestampField(unittest.TestCase):
@@ -329,23 +319,6 @@ class TestNormalizeCycle(unittest.TestCase):
         self.assertFalse(result.fireField.valid)
         self.assertFalse(result.overtempField.valid)
         self.assertFalse(result.adultField.valid)
-
-
-def buildRealOrchestrator():
-    """테스트 헬퍼 — 실제(real) IU-0002~0013 협력 객체로 구성된 오케스트레이터를 만든다."""
-    return SafetyKernelOrchestrator(
-        freshnessMonitor=FreshnessMonitor(),
-        stateManager=StateManager(),
-        outputHoldActuator=OutputHoldActuator(),
-        commandArbiter=CommandArbiter(),
-        outputAdapter=OutputActuatorAdapter(),
-        notificationAdapter=NotificationAdapter(),
-        decisionLogger=DecisionLoggerStub(),
-        crashMonitor=CrashMonitor(),
-        approachRiskEvaluator=ApproachRiskEvaluator(),
-        overrideManager=ApproachRiskOverrideManager(),
-        fireMonitor=FireOvertempOccupantMonitor(),
-    )
 
 
 class TestHandleCycle(unittest.TestCase):
