@@ -26,7 +26,11 @@ from ngv.adapters.input_validation_adapter import InputValidationAdapter
 from ngv.adapters.notification_adapter import NotificationAdapter
 from ngv.adapters.output_actuator_adapter import OutputActuatorAdapter
 from ngv.app.safety_kernel_orchestrator import SafetyKernelOrchestrator
+from ngv.core.approach_risk_evaluator import ApproachRiskEvaluator
+from ngv.core.approach_risk_override_manager import ApproachRiskOverrideManager
 from ngv.core.command_arbiter import CommandArbiter
+from ngv.core.crash_monitor import CrashMonitor
+from ngv.core.fire_overtemp_occupant_monitor import FireOvertempOccupantMonitor
 from ngv.core.freshness_monitor import FreshnessMonitor
 from ngv.core.output_hold_actuator import OutputHoldActuator
 from ngv.core.state_manager import StateManager
@@ -45,6 +49,24 @@ def buildRawInput(rawSourceTimestamp, rawIgnitionOn, rawSensorFault):
     )
 
 
+def buildPhase2RawInput(rawSourceTimestamp, rawIgnitionOn, rawSensorFault, **phase2RawFields):
+    """!
+    @brief OEM-IF-002(crash_status)/OEM-IF-003(접근위험)/OEM-IF-007(화재/과온/탑승) Phase2
+           원시 입력 6필드를 포함하는 RawCycleInput을 만든다(형식 검증 전 값). 지정하지 않은
+           Phase2 필드는 RawCycleInput 기본값(None, MISSING으로 판정됨)을 그대로 사용한다
+           (tests_integration/it_helpers.py::buildPhase2RawCycleInput과 동일 관례).
+
+    @param phase2RawFields rawCrashStatus/rawLeftApproachRisk/rawRightApproachRisk/
+           rawFireDetected/rawOvertemperatureDetected/rawAdultPresent 중 필요한 것만 kwargs로 전달
+    """
+    return RawCycleInput(
+        rawSourceTimestamp=rawSourceTimestamp,
+        rawIgnitionOn=rawIgnitionOn,
+        rawSensorFault=rawSensorFault,
+        **phase2RawFields,
+    )
+
+
 def buildSystemUnderTest():
     """!
     @brief 시스템 테스트 대상 — ARC-0001(입력 검증) + ARC-0002~0008(오케스트레이터 실물 조립)
@@ -60,6 +82,10 @@ def buildSystemUnderTest():
         outputAdapter=OutputActuatorAdapter(),
         notificationAdapter=NotificationAdapter(),
         decisionLogger=DecisionLoggerStub(),
+        crashMonitor=CrashMonitor(),
+        approachRiskEvaluator=ApproachRiskEvaluator(),
+        overrideManager=ApproachRiskOverrideManager(),
+        fireMonitor=FireOvertempOccupantMonitor(),
     )
     return InputValidationAdapter(orchestrator)
 
@@ -68,5 +94,6 @@ __all__ = [
     "LockCommand",
     "SystemState",
     "buildRawInput",
+    "buildPhase2RawInput",
     "buildSystemUnderTest",
 ]

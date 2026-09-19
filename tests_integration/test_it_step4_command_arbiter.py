@@ -3,15 +3,16 @@
 @brief 통합 4단계 — ARC-0005(Command Arbiter, 게이트 골격), IF-0008 인터페이스 계약 검증.
 
 테스트 베이시스: ENG-SWE2-001 6.1절(IF-0008), 11장 순서표 4행("단위시험 하네스").
-Phase 1은 상태/입력유효성 게이트만 구현하며 candidateCommands는 항상 빈 리스트로 호출된다
-(1.3절 적용경계). 이 경계를 벗어난 호출(candidateCommands 비어있지 않음)에 대한 방어 동작도
-ASIL B 관련 게이트 경로이므로 오류 주입으로 검증한다.
+Phase 2(ENG-SWE3-001 v0.2 5.2절)부터 candidateCommands는 문(door)별 우선순위 후보 선택
+알고리즘으로 처리된다 — Phase1의 "candidateCommands가 비어있지 않으면 NotImplementedError"
+계약은 완전히 대체되었다(하위호환 아님). IT-0020은 이 신규 계약(정상 처리)을 검증하도록 갱신됨.
 """
 
 import unittest
 
 from tests_integration.it_helpers import ArbitrationCommand, SystemState, buildStateResult
 from ngv.core.command_arbiter import CommandArbiter
+from ngv.domain.types import CandidateCommand, Door
 
 
 class TestIT0017StateFaultBlocksRegardlessOfInputValid(unittest.TestCase):
@@ -75,22 +76,28 @@ class TestIT0019NormalAndValidPassesGate(unittest.TestCase):
         self.assertEqual(result.rightCommand, ArbitrationCommand.NO_CHANGE)
 
 
-class TestIT0020CandidateCommandsOutOfPhase1ScopeRaises(unittest.TestCase):
-    """IT-0020 — Trace: IF-0008, Phase1 적용경계(1.3절) 오류 주입"""
+class TestIT0020CandidateCommandsAreArbitratedByPriority(unittest.TestCase):
+    """IT-0020 — Trace: IF-0008/IF-0016~0019, ENG-SWE3-001 v0.2 5.2절/6.8절(Phase2 갱신)"""
 
-    def testNonEmptyCandidateCommandsRaisesNotImplementedError(self):
+    def testNonEmptyCandidateCommandsAreResolvedByMinimumPriority(self):
         """!
-        @brief Phase1 적용경계를 벗어난 호출(candidateCommands 비어있지 않음)은
-               NotImplementedError로 명시적으로 거부되어야 한다(우선순위 규칙 체인은 Phase2+).
-        @technique 오류주입(Fault Injection Test) — 계약 경계 위반 호출
-        @case Negative — 조용히 무시되지 않고 명시적으로 실패하는지 검증(silent failure 방지)
-        @breaks 비어있지 않은 candidateCommands가 조용히 무시되어 Phase1 범위를 벗어난 값이
-                반환되는 회귀
+        @brief 비어있지 않은 candidateCommands는 더 이상 거부되지 않고 문별 최소-priority
+               후보 선택으로 정상 처리된다(Phase1 NotImplementedError 계약의 완전한 대체).
+        @technique 결정테이블 테스트(Decision Table Testing) — 결정표 I, 단일 BOTH 후보 정상 처리
+        @case Positive — Phase2 신규 계약(우선순위 중재)이 통합 경계에서도 성립하는지 검증
+        @breaks 비어있지 않은 candidateCommands에서 여전히 NotImplementedError가 발생하거나
+                후보가 무시되는 회귀(Phase1 계약으로의 역행)
         """
         arbiter = CommandArbiter()
+        candidates = [
+            CandidateCommand(door=Door.BOTH, command=ArbitrationCommand.RELEASE, priority=1, reasonCode="R")
+        ]
 
-        with self.assertRaises(NotImplementedError):
-            arbiter.arbitrate(buildStateResult(SystemState.NORMAL), True, ["some-command"])
+        result = arbiter.arbitrate(buildStateResult(SystemState.NORMAL), True, candidates)
+
+        self.assertFalse(result.blocked)
+        self.assertEqual(result.leftCommand, ArbitrationCommand.RELEASE)
+        self.assertEqual(result.rightCommand, ArbitrationCommand.RELEASE)
 
 
 if __name__ == "__main__":

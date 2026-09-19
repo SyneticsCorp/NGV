@@ -20,13 +20,20 @@ from ngv.adapters.input_validation_adapter import InputValidationAdapter
 from ngv.adapters.notification_adapter import NotificationAdapter
 from ngv.adapters.output_actuator_adapter import OutputActuatorAdapter
 from ngv.app.safety_kernel_orchestrator import SafetyKernelOrchestrator
+from ngv.core.approach_risk_evaluator import ApproachRiskEvaluator
+from ngv.core.approach_risk_override_manager import ApproachRiskOverrideManager
 from ngv.core.command_arbiter import CommandArbiter
+from ngv.core.crash_monitor import CrashMonitor
+from ngv.core.fire_overtemp_occupant_monitor import FireOvertempOccupantMonitor
 from ngv.core.freshness_monitor import FreshnessMonitor
 from ngv.core.output_hold_actuator import OutputHoldActuator
 from ngv.core.state_manager import StateManager
 from ngv.domain.types import (
     ArbitrationCommand,
     ArbitrationResult,
+    CandidateCommand,
+    CrashStatus,
+    Door,
     FieldValidationResult,
     FreshnessResult,
     NormalizedSafetyInput,
@@ -96,6 +103,47 @@ def buildRawCycleInput(rawSourceTimestamp, rawIgnitionOn, rawSensorFault):
     )
 
 
+def buildPhase2RawCycleInput(rawSourceTimestamp, rawIgnitionOn, rawSensorFault, **phase2RawFields):
+    """!
+    @brief IF-0001/IF-0002/IF-0013/IF-0014/IF-0015 원시 외부 입력(RawCycleInput, Phase2 6필드
+           포함)을 만든다(11장 13단계). 지정하지 않은 Phase2 필드는 RawCycleInput 기본값(None,
+           MISSING으로 판정됨)을 그대로 사용한다.
+
+    @param phase2RawFields rawCrashStatus/rawLeftApproachRisk/rawRightApproachRisk/
+           rawFireDetected/rawOvertemperatureDetected/rawAdultPresent 중 필요한 것만 kwargs로 전달
+    """
+    return RawCycleInput(
+        rawSourceTimestamp=rawSourceTimestamp,
+        rawIgnitionOn=rawIgnitionOn,
+        rawSensorFault=rawSensorFault,
+        **phase2RawFields,
+    )
+
+
+def buildPhase2NormalizedInput(timestampField, ignitionField, sensorFaultField, **phase2Fields):
+    """!
+    @brief IF-0005 데이터 계약(NormalizedSafetyInput, Phase2 6필드 포함)을 만든다(11장 8~12단계).
+           지정하지 않은 Phase2 필드는 default_factory(MISSING, valid=False)를 그대로 사용한다.
+
+    @param phase2Fields crashStatusField/leftApproachRiskField/rightApproachRiskField/fireField/
+           overtempField/adultField 중 필요한 것만 kwargs로 전달
+    """
+    return NormalizedSafetyInput(
+        sourceTimestampField=timestampField,
+        ignitionOnField=ignitionField,
+        sensorFaultField=sensorFaultField,
+        **phase2Fields,
+    )
+
+
+def buildCandidateCommand(door, command, priority, reasonCode="TEST_REASON"):
+    """!
+    @brief IF-0016~IF-0019가 공통으로 산출하는 CandidateCommand(IF-0008 입력)를 합성한다
+           (12단계에서 8~11단계 실물 없이 결과를 모사할 때 사용).
+    """
+    return CandidateCommand(door=door, command=command, priority=priority, reasonCode=reasonCode)
+
+
 def buildRealOrchestrator():
     """!
     @brief 6단계 통합 대상 — ARC-0002~0008 실물로 구성한 오케스트레이터(mock 미사용).
@@ -108,6 +156,10 @@ def buildRealOrchestrator():
         outputAdapter=OutputActuatorAdapter(),
         notificationAdapter=NotificationAdapter(),
         decisionLogger=DecisionLoggerStub(),
+        crashMonitor=CrashMonitor(),
+        approachRiskEvaluator=ApproachRiskEvaluator(),
+        overrideManager=ApproachRiskOverrideManager(),
+        fireMonitor=FireOvertempOccupantMonitor(),
     )
 
 
@@ -190,6 +242,9 @@ class RaisingDecisionLogger(DecisionLoggerStub):
 __all__ = [
     "ArbitrationCommand",
     "SystemState",
+    "CrashStatus",
+    "Door",
+    "CandidateCommand",
     "validField",
     "invalidField",
     "buildNormalizedInput",
@@ -197,6 +252,9 @@ __all__ = [
     "buildStateResult",
     "buildArbitrationResult",
     "buildRawCycleInput",
+    "buildPhase2RawCycleInput",
+    "buildPhase2NormalizedInput",
+    "buildCandidateCommand",
     "buildRealOrchestrator",
     "buildRealAdapterWithOrchestrator",
     "recordCalls",
