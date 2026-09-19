@@ -18,12 +18,22 @@ from typing import Any, Optional
 @dataclass(frozen=True)
 class RawCycleInput:
     """!
-    @brief 형식 미검증 원시 Vehicle 입력(OEM-IF-001/009 원문 그대로).
+    @brief 형식 미검증 원시 Vehicle 입력(OEM-IF-001/002/003/007/009 원문 그대로).
+
+    Phase2 신규 6필드(rawCrashStatus 등)는 default=None — 호출부가 아직 값을 채우지 않은
+    경우 IU-0001 검증 함수가 그대로 "MISSING"으로 판정하도록 하기 위함이며(4장 invariant),
+    Phase1 3필드 호출부(테스트 등)와의 하위 호환을 목적으로 임의 값을 대체하지 않는다.
     """
 
     rawSourceTimestamp: Any
     rawIgnitionOn: Any
     rawSensorFault: Any
+    rawCrashStatus: Any = None
+    rawLeftApproachRisk: Any = None
+    rawRightApproachRisk: Any = None
+    rawFireDetected: Any = None
+    rawOvertemperatureDetected: Any = None
+    rawAdultPresent: Any = None
 
 
 @dataclass(frozen=True)
@@ -40,16 +50,35 @@ class FieldValidationResult:
     errorReason: Optional[str] = None
 
 
+def buildMissingFieldDefault():
+    """!
+    @brief NormalizedSafetyInput의 Phase2 신규 필드 default_factory — "MISSING"으로 검증된
+           FieldValidationResult를 만든다(값 자체는 None이 아닌 객체이므로 하위 IU의
+           "not None" 사전조건은 항상 만족되고, valid=False이므로 10.4절 원칙에 따라
+           새 능동 후보를 생성하지 않는다).
+    @return FieldValidationResult(value=None, valid=False, rawValue=None, errorReason="MISSING")
+    """
+    return FieldValidationResult(value=None, valid=False, rawValue=None, errorReason="MISSING")
+
+
 @dataclass(frozen=True)
 class NormalizedSafetyInput:
     """!
     @brief IU-0001.normalizeCycle()의 산출물 — 검증 완료 입력.
     @invariant sensorFaultField.value는 항상 not None(10장 fail-safe 대체 규칙에 의해 보장).
+    @invariant Phase2 신규 6필드는 대체 보장이 없다 — valid=False이면 value는 None일 수 있다
+               (10.4절 신규 원칙). default_factory는 하위 호환을 위해 "MISSING"을 채운다.
     """
 
     sourceTimestampField: FieldValidationResult
     ignitionOnField: FieldValidationResult
     sensorFaultField: FieldValidationResult
+    crashStatusField: FieldValidationResult = field(default_factory=buildMissingFieldDefault)
+    leftApproachRiskField: FieldValidationResult = field(default_factory=buildMissingFieldDefault)
+    rightApproachRiskField: FieldValidationResult = field(default_factory=buildMissingFieldDefault)
+    fireField: FieldValidationResult = field(default_factory=buildMissingFieldDefault)
+    overtempField: FieldValidationResult = field(default_factory=buildMissingFieldDefault)
+    adultField: FieldValidationResult = field(default_factory=buildMissingFieldDefault)
 
 
 @dataclass(frozen=True)
@@ -86,6 +115,26 @@ class StateResult:
     warningReasonCode: Optional[str] = None
 
 
+class CrashStatus(Enum):
+    """!
+    @brief 충돌 상태(OEM-IF-002 대응, IU-0010 입력).
+    """
+
+    NONE = "NONE"
+    PENDING = "PENDING"
+    CONFIRMED = "CONFIRMED"
+
+
+class Door(Enum):
+    """!
+    @brief CandidateCommand의 적용 대상 문(door).
+    """
+
+    LEFT = "LEFT"
+    RIGHT = "RIGHT"
+    BOTH = "BOTH"
+
+
 class LockCommand(Enum):
     """!
     @brief 확정된 차일드락 출력 커맨드(OEM-IF-005 대응).
@@ -106,16 +155,89 @@ class ArbitrationCommand(Enum):
 
 
 @dataclass(frozen=True)
+class CandidateCommand:
+    """!
+    @brief IU-0010~0013이 생성하는 후보 커맨드(Phase2 신규, IU-0005 입력).
+    @invariant command ∈ {LOCK, RELEASE}(NO_CHANGE 금지 — 후보는 항상 명시적 동작).
+    @invariant priority ∈ {1,2,3}(PRIORITY_CRASH/APPROACH_RISK/FIRE_OVERTEMP_OCCUPANT).
+    @invariant reasonCode는 비공백 문자열.
+    """
+
+    door: Door
+    command: ArbitrationCommand
+    priority: int
+    reasonCode: str
+
+
+@dataclass(frozen=True)
+class CrashEvaluationResult:
+    """!
+    @brief IU-0010.evaluate()의 산출물(Phase2 신규, IF-0016).
+    @invariant status==CONFIRMED ⟺ releaseCandidate is not None.
+    @invariant status==PENDING ⟹ pendingHoldApplied=True(그 외 False).
+    """
+
+    status: CrashStatus
+    releaseCandidate: Optional[CandidateCommand]
+    pendingHoldApplied: bool
+
+
+@dataclass(frozen=True)
+class ApproachRiskResult:
+    """!
+    @brief IU-0011.evaluate()의 산출물(Phase2 신규, IF-0017).
+    @invariant leftRiskActive ⟺ leftSuppressCandidate is not None ⟺ leftReasonCode is not None
+               (우측 대칭, 좌우 완전 독립 — SWR-009).
+    """
+
+    leftRiskActive: bool
+    rightRiskActive: bool
+    leftSuppressCandidate: Optional[CandidateCommand]
+    rightSuppressCandidate: Optional[CandidateCommand]
+    leftReasonCode: Optional[str]
+    rightReasonCode: Optional[str]
+
+
+@dataclass(frozen=True)
+class OverrideDecision:
+    """!
+    @brief IU-0012.decide()의 산출물(Phase2 신규, IF-0018).
+    @invariant leftOverrideActive ⟹ leftOverrideReasonCode is not None(우측 대칭).
+    """
+
+    leftOverrideActive: bool
+    rightOverrideActive: bool
+    leftOverrideReasonCode: Optional[str]
+    rightOverrideReasonCode: Optional[str]
+
+
+@dataclass(frozen=True)
+class ForcedReleaseResult:
+    """!
+    @brief IU-0013.evaluate()의 산출물(Phase2 신규, IF-0019).
+    @invariant triggered ⟺ len(triggeredReasonCodes)>0 ⟺ releaseCandidate is not None.
+    """
+
+    triggered: bool
+    releaseCandidate: Optional[CandidateCommand]
+    triggeredReasonCodes: list
+
+
+@dataclass(frozen=True)
 class ArbitrationResult:
     """!
     @brief IU-0005.arbitrate()의 산출물.
-    @invariant blocked=True ⇒ leftCommand==NO_CHANGE and rightCommand==NO_CHANGE.
+    @invariant blocked=True ⇒ leftCommand==NO_CHANGE and rightCommand==NO_CHANGE
+               (Phase2: leftReasonCode/rightReasonCode도 None).
+    @invariant leftCommand==NO_CHANGE ⟺ leftReasonCode is None(우측 대칭, Phase2 신규).
     """
 
     leftCommand: ArbitrationCommand
     rightCommand: ArbitrationCommand
     blocked: bool
     blockReason: Optional[str] = None
+    leftReasonCode: Optional[str] = None
+    rightReasonCode: Optional[str] = None
 
 
 @dataclass(frozen=True)

@@ -21,20 +21,37 @@ from tests_integration.it_helpers import (
     SystemState,
     buildNormalizedInput,
     buildRealOrchestrator,
+    buildRecordedBaseCollaboratorsKwargs,
     captureReturn,
     invalidField,
-    recordCalls,
     validField,
 )
 from ngv.adapters.decision_logger_stub import DecisionLoggerStub
 from ngv.adapters.notification_adapter import NotificationAdapter
 from ngv.adapters.output_actuator_adapter import OutputActuatorAdapter
 from ngv.app.safety_kernel_orchestrator import SafetyKernelOrchestrator
+from ngv.core.approach_risk_evaluator import ApproachRiskEvaluator
+from ngv.core.approach_risk_override_manager import ApproachRiskOverrideManager
 from ngv.core.command_arbiter import CommandArbiter
+from ngv.core.crash_monitor import CrashMonitor
+from ngv.core.fire_overtemp_occupant_monitor import FireOvertempOccupantMonitor
 from ngv.core.freshness_monitor import FreshnessMonitor
 from ngv.core.output_hold_actuator import OutputHoldActuator
 from ngv.core.state_manager import StateManager
 from ngv.domain.types import LockCommand
+
+
+def buildPhase2Collaborators():
+    """!
+    @brief 이 통합시험 파일의 직접 조립(direct construction) 케이스가 공통으로 쓰는
+           Phase2 신규 협력 객체(IU-0010~0013) kwargs를 만든다(중복 코드 제거).
+    """
+    return {
+        "crashMonitor": CrashMonitor(),
+        "approachRiskEvaluator": ApproachRiskEvaluator(),
+        "overrideManager": ApproachRiskOverrideManager(),
+        "fireMonitor": FireOvertempOccupantMonitor(),
+    }
 
 
 class TestIT0026NormalCycleEndToEnd(unittest.TestCase):
@@ -60,6 +77,7 @@ class TestIT0026NormalCycleEndToEnd(unittest.TestCase):
             outputAdapter=outputAdapter,
             notificationAdapter=notificationAdapter,
             decisionLogger=DecisionLoggerStub(),
+            **buildPhase2Collaborators(),
         )
         cycleInput = buildNormalizedInput(validField(1.000), validField(True), validField(False))
 
@@ -115,6 +133,7 @@ class TestIT0028FaultCycleFreezesAndWarns(unittest.TestCase):
             outputAdapter=OutputActuatorAdapter(),
             notificationAdapter=notificationAdapter,
             decisionLogger=DecisionLoggerStub(),
+            **buildPhase2Collaborators(),
         )
         normalInput = buildNormalizedInput(validField(1.000), validField(True), validField(False))
         orchestrator.evaluateCycle(normalInput, 1.000)
@@ -142,13 +161,8 @@ class TestIT0029FixedCallOrderAcrossRealComponents(unittest.TestCase):
         """
         callLog = []
         orchestrator = SafetyKernelOrchestrator(
-            freshnessMonitor=recordCalls(FreshnessMonitor(), "evaluate", "IF-0006", callLog),
-            stateManager=recordCalls(StateManager(), "evaluate", "IF-0007", callLog),
-            outputHoldActuator=recordCalls(OutputHoldActuator(), "confirm", "IF-0009", callLog),
-            commandArbiter=recordCalls(CommandArbiter(), "arbitrate", "IF-0008", callLog),
-            outputAdapter=recordCalls(OutputActuatorAdapter(), "publish", "IF-0010", callLog),
-            notificationAdapter=recordCalls(NotificationAdapter(), "publishWarning", "IF-0011", callLog),
-            decisionLogger=recordCalls(DecisionLoggerStub(), "log", "IF-0012", callLog),
+            **buildRecordedBaseCollaboratorsKwargs(callLog),
+            **buildPhase2Collaborators(),
         )
         cycleInput = buildNormalizedInput(validField(1.000), validField(True), validField(False))
 
@@ -180,6 +194,7 @@ class TestIT0030CoreStageFaultInjectionForcesFault(unittest.TestCase):
             outputAdapter=OutputActuatorAdapter(),
             notificationAdapter=NotificationAdapter(),
             decisionLogger=DecisionLoggerStub(),
+            **buildPhase2Collaborators(),
         )
         cycleInput = buildNormalizedInput(validField(1.000), validField(True), validField(False))
 
@@ -210,6 +225,7 @@ class TestIT0031PublishStageFaultInjectionIsolated(unittest.TestCase):
             outputAdapter=RaisingOutputActuatorAdapter(),
             notificationAdapter=RaisingNotificationAdapter(),
             decisionLogger=RaisingDecisionLogger(),
+            **buildPhase2Collaborators(),
         )
         cycleInput = buildNormalizedInput(validField(1.000), validField(True), validField(False))
 

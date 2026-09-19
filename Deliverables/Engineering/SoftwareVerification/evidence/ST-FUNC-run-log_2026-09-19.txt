@@ -1,0 +1,39 @@
+testLeftApproachRiskTrueLocksLeftDoor (tests_system.test_st_func_swr005_006_007_008_009_017.TestSTFUNC0014ApproachRiskLocksSingleDoor.testLeftApproachRiskTrueLocksLeftDoor)
+! ... [32mok[0m
+testLeftApproachRiskKeepsLockDespiteSimultaneousFireReleaseCandidate (tests_system.test_st_func_swr005_006_007_008_009_017.TestSTFUNC0015ApproachRiskSuppressesCompetingReleaseCandidate.testLeftApproachRiskKeepsLockDespiteSimultaneousFireReleaseCandidate)
+! ... [32mok[0m
+testReinputAtExactlyTenSecondsDoesNotProduceObservableOverrideEffect (tests_system.test_st_func_swr005_006_007_008_009_017.TestSTFUNC0016OverrideWithinTenSecondsUnreachableAtSystemBoundary.testReinputAtExactlyTenSecondsDoesNotProduceObservableOverrideEffect)
+! ... [32mok[0m
+testReinputAfterTenPointOneSecondsKeepsSuppressionApplied (tests_system.test_st_func_swr005_006_007_008_009_017.TestSTFUNC0017SuppressionMaintainedAfterTenSecondWindow.testReinputAfterTenPointOneSecondsKeepsSuppressionApplied)
+! ... [32mok[0m
+testCrashConfirmedObservedAtThreeHundredMsGapStillYieldsImmediateRelease (tests_system.test_st_func_swr005_006_007_008_009_017.TestSTFUNC0018CrashConfirmedReleasesWithinBudgetUnderCycleGapStress.testCrashConfirmedObservedAtThreeHundredMsGapStillYieldsImmediateRelease)
+! ... [32mok[0m
+testCrashConfirmedReleasesLeftDoorEvenWhileApproachRiskRequestsLock (tests_system.test_st_func_swr005_006_007_008_009_017.TestSTFUNC0019CrashConfirmedOutranksApproachRisk.testCrashConfirmedReleasesLeftDoorEvenWhileApproachRiskRequestsLock)
+! ... [32mok[0m
+testReleaseRemainsWhileConfirmedPersistsEvenWhenApproachRiskAppearsLater (tests_system.test_st_func_swr005_006_007_008_009_017.TestSTFUNC0020CrashConfirmedReleaseSustainedAcrossCycles.testReleaseRemainsWhileConfirmedPersistsEvenWhenApproachRiskAppearsLater)
+! ... [32mok[0m
+testCrashPendingAloneKeepsBootDefaultLockedOutput (tests_system.test_st_func_swr005_006_007_008_009_017.TestSTFUNC0021CrashPendingDoesNotPrematurelyRelease.testCrashPendingAloneKeepsBootDefaultLockedOutput)
+! ... [32mok[0m
+testCrashPendingWithFireDetectedStillReleasesViaFireNotCrash (tests_system.test_st_func_swr005_006_007_008_009_017.TestSTFUNC0022CrashPendingDoesNotBlockOtherIndependentLogic.testCrashPendingWithFireDetectedStillReleasesViaFireNotCrash)
+! ... [32mok[0m
+testBothRiskFalseKeepsBothDoorsAtPriorReleasedState (tests_system.test_st_func_swr005_006_007_008_009_017.TestSTFUNC0023ApproachRiskBothFalseLeavesBothDoorsUnaffected.testBothRiskFalseKeepsBothDoorsAtPriorReleasedState)
+! ... [32mok[0m
+testLeftRiskTrueLocksLeftOnlyWhileRightStaysReleased (tests_system.test_st_func_swr005_006_007_008_009_017.TestSTFUNC0024ApproachRiskLeftTrueRightFalseAffectsOnlyLeft.testLeftRiskTrueLocksLeftOnlyWhileRightStaysReleased)
+! ... [32mok[0m
+testRightRiskTrueLocksRightOnlyWhileLeftStaysReleased (tests_system.test_st_func_swr005_006_007_008_009_017.TestSTFUNC0025ApproachRiskRightTrueLeftFalseAffectsOnlyRight.testRightRiskTrueLocksRightOnlyWhileLeftStaysReleased)
+! ... [32mok[0m
+testBothRiskTrueLocksBothDoorsIndependently (tests_system.test_st_func_swr005_006_007_008_009_017.TestSTFUNC0026ApproachRiskBothTrueLocksBothDoors.testBothRiskTrueLocksBothDoorsIndependently)
+! ... [32mok[0m
+testFireDetectedTrueAloneReleasesBothDoors (tests_system.test_st_func_swr005_006_007_008_009_017.TestSTFUNC0027FireDetectedAloneReleasesBothDoors.testFireDetectedTrueAloneReleasesBothDoors)
+! ... [32mok[0m
+testOvertemperatureDetectedTrueAloneReleasesBothDoors (tests_system.test_st_func_swr005_006_007_008_009_017.TestSTFUNC0028OvertemperatureDetectedAloneReleasesBothDoors.testOvertemperatureDetectedTrueAloneReleasesBothDoors)
+! ... [32mok[0m
+testAdultPresentTrueAloneReleasesBothDoors (tests_system.test_st_func_swr005_006_007_008_009_017.TestSTFUNC0029AdultPresentAloneReleasesBothDoors.testAdultPresentTrueAloneReleasesBothDoors)
+! ... [32mok[0m
+testFireOvertemperatureAdultAllTrueSimultaneouslyStillReleasesBothDoors (tests_system.test_st_func_swr005_006_007_008_009_017.TestSTFUNC0030AllThreeForcedReleaseTriggersSimultaneously.testFireOvertemperatureAdultAllTrueSimultaneouslyStillReleasesBothDoors)
+! ... [32mok[0m
+
+----------------------------------------------------------------------
+Ran 17 tests in 0.006s
+
+[32mOK[0m

@@ -38,3 +38,45 @@ BLOCK_REASON_STATE_FAULT = "STATE_FAULT"
 
 ## IU-0005 게이트가 inputValid==False로 차단할 때의 blockReason(ENG-SWE3-001 5장 IU-0005 계약).
 BLOCK_REASON_INPUT_INVALID = "INPUT_INVALID"
+
+## SWR-006(a)/(b) 원문 수치(10초). override 재입력 판정 윈도우(초). 변경 불가(요구사항 직접 인용).
+OVERRIDE_WINDOW_S = 10.0
+
+## 충돌(crash) 후보 우선순위(최고). ENG-SWE2-001 4장/9장 우선순위 태그. 변경 불가(질적 순서).
+PRIORITY_CRASH = 1
+
+## 접근위험(approach risk) 후보 우선순위(중간). 상동.
+PRIORITY_APPROACH_RISK = 2
+
+## 화재/과온/탑승(fire/overtemp/occupant) 후보 우선순위(최저, 그러나 필수). 상동.
+PRIORITY_FIRE_OVERTEMP_OCCUPANT = 3
+
+## IU-0010이 crash_status=CONFIRMED일 때 생성하는 긴급해제 후보의 이유코드(ENG-SWE3-001 4장 카탈로그).
+REASON_CODE_CRASH_CONFIRMED = "CRASH_CONFIRMED"
+
+## IU-0011이 좌측 접근위험 억제 후보에 부여하는 이유코드.
+REASON_CODE_APPROACH_RISK_LEFT = "APPROACH_RISK_LEFT"
+
+## IU-0011이 우측 접근위험 억제 후보에 부여하는 이유코드.
+REASON_CODE_APPROACH_RISK_RIGHT = "APPROACH_RISK_RIGHT"
+
+## IU-0012가 좌측 override 성립 시 부여하는 이유코드(SWR-006a).
+REASON_CODE_APPROACH_RISK_OVERRIDE_LEFT = "APPROACH_RISK_OVERRIDE_LEFT"
+
+## IU-0012가 우측 override 성립 시 부여하는 이유코드(SWR-006a).
+REASON_CODE_APPROACH_RISK_OVERRIDE_RIGHT = "APPROACH_RISK_OVERRIDE_RIGHT"
+
+## IU-0013이 fire_detected=True일 때 triggeredReasonCodes에 추가하는 이유코드.
+REASON_CODE_FIRE_DETECTED = "FIRE_DETECTED"
+
+## IU-0013이 overtemperature_detected=True일 때 triggeredReasonCodes에 추가하는 이유코드.
+REASON_CODE_OVERTEMPERATURE_DETECTED = "OVERTEMPERATURE_DETECTED"
+
+## IU-0013이 adult_present=True일 때 triggeredReasonCodes에 추가하는 이유코드.
+REASON_CODE_ADULT_PRESENT_DETECTED = "ADULT_PRESENT_DETECTED"
+
+## IU-0013이 triggered=True일 때 releaseCandidate.reasonCode에 부여하는 대표 마커.
+REASON_CODE_FORCED_RELEASE = "FORCED_RELEASE"
+
+## IU-0001.validateCrashStatusField()가 str이지만 정의된 3개 값(NONE/PENDING/CONFIRMED) 외일 때의 오류 사유.
+ERROR_REASON_INVALID_ENUM_VALUE = "INVALID_ENUM_VALUE"

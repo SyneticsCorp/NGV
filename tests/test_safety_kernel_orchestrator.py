@@ -11,8 +11,19 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from ngv.domain.constants import WARNING_CODE_ORCHESTRATION_ERROR
-from ngv.domain.types import FieldValidationResult, LockCommand, NormalizedSafetyInput, SystemState
+from ngv.domain.types import (
+    ArbitrationCommand,
+    CrashStatus,
+    FieldValidationResult,
+    LockCommand,
+    NormalizedSafetyInput,
+    SystemState,
+)
+from ngv.core.approach_risk_evaluator import ApproachRiskEvaluator
+from ngv.core.approach_risk_override_manager import ApproachRiskOverrideManager
 from ngv.core.command_arbiter import CommandArbiter
+from ngv.core.crash_monitor import CrashMonitor
+from ngv.core.fire_overtemp_occupant_monitor import FireOvertempOccupantMonitor
 from ngv.core.freshness_monitor import FreshnessMonitor
 from ngv.core.output_hold_actuator import OutputHoldActuator
 from ngv.core.state_manager import StateManager
@@ -20,6 +31,8 @@ from ngv.adapters.decision_logger_stub import DecisionLoggerStub
 from ngv.adapters.notification_adapter import NotificationAdapter
 from ngv.adapters.output_actuator_adapter import OutputActuatorAdapter
 from ngv.app.safety_kernel_orchestrator import SafetyKernelOrchestrator
+
+from testsupport.orchestrator_factory import buildOrchestrator
 
 
 def validField(value):
@@ -32,26 +45,35 @@ def invalidField(rawValue, errorReason="TYPE_ERROR"):
     return FieldValidationResult(value=None, valid=False, rawValue=rawValue, errorReason=errorReason)
 
 
-def normalizedInput(timestampField, ignitionField, sensorFaultField):
-    """테스트 헬퍼 — NormalizedSafetyInput을 만든다."""
-    return NormalizedSafetyInput(
-        sourceTimestampField=timestampField,
-        ignitionOnField=ignitionField,
-        sensorFaultField=sensorFaultField,
-    )
-
-
-def buildOrchestrator():
-    """테스트 헬퍼 — 실제(real) 협력 객체로 구성된 오케스트레이터를 만든다."""
-    return SafetyKernelOrchestrator(
-        freshnessMonitor=FreshnessMonitor(),
-        stateManager=StateManager(),
-        outputHoldActuator=OutputHoldActuator(),
-        commandArbiter=CommandArbiter(),
-        outputAdapter=OutputActuatorAdapter(),
-        notificationAdapter=NotificationAdapter(),
-        decisionLogger=DecisionLoggerStub(),
-    )
+def normalizedInput(
+    timestampField,
+    ignitionField,
+    sensorFaultField,
+    crashStatusField=None,
+    leftApproachRiskField=None,
+    rightApproachRiskField=None,
+    fireField=None,
+    overtempField=None,
+    adultField=None,
+):
+    """테스트 헬퍼 — NormalizedSafetyInput을 만든다(Phase2 6필드는 기본값을 그대로 사용 가능)."""
+    kwargs = {
+        "sourceTimestampField": timestampField,
+        "ignitionOnField": ignitionField,
+        "sensorFaultField": sensorFaultField,
+    }
+    optionalFields = {
+        "crashStatusField": crashStatusField,
+        "leftApproachRiskField": leftApproachRiskField,
+        "rightApproachRiskField": rightApproachRiskField,
+        "fireField": fireField,
+        "overtempField": overtempField,
+        "adultField": adultField,
+    }
+    for name, value in optionalFields.items():
+        if value is not None:
+            kwargs[name] = value
+    return NormalizedSafetyInput(**kwargs)
 
 
 def recordCalls(instance, methodName, tag, callLog):
@@ -138,20 +160,25 @@ class TestSafetyKernelOrchestratorEvaluateCycleNormalPath(unittest.TestCase):
 
     def testFixedCallOrderAcrossAllSubComponents(self):
         """!
-        @brief IU-0002->0003->0005->0004->0006->0007->0008 고정 순서로 정확히 1회씩 호출한다.
+        @brief IU-0002->0003->0010->0011->0012->0013->0005->0004->0006->0007->0008 고정 순서로
+               정확히 1회씩 호출한다(Phase2 갱신, 3장 상세 호출관계).
         @technique 유스케이스 테스트(Use Case Testing) — 3장 상세 호출관계의 고정 순서 계약
         @case Positive — 통합 순서(ENG-SWE2-001 11장/ENG-SWE3-001 3장)를 그대로 구현했는지 검증
-        @breaks 호출 순서가 뒤바뀌거나 특정 단계가 생략/중복되는 회귀
+        @breaks 호출 순서가 뒤바뀌거나 Phase2 신규 단계가 생략/중복되는 회귀
         """
         callLog = []
         freshnessMonitor = recordCalls(FreshnessMonitor(), "evaluate", "IU-0002", callLog)
         stateManager = recordCalls(StateManager(), "evaluate", "IU-0003", callLog)
+        crashMonitor = recordCalls(CrashMonitor(), "evaluate", "IU-0010", callLog)
+        approachRiskEvaluator = recordCalls(ApproachRiskEvaluator(), "evaluate", "IU-0011", callLog)
+        overrideManager = recordCalls(ApproachRiskOverrideManager(), "decide", "IU-0012", callLog)
+        fireMonitor = recordCalls(FireOvertempOccupantMonitor(), "evaluate", "IU-0013", callLog)
         commandArbiter = recordCalls(CommandArbiter(), "arbitrate", "IU-0005", callLog)
         outputHoldActuator = recordCalls(OutputHoldActuator(), "confirm", "IU-0004", callLog)
         outputAdapter = recordCalls(OutputActuatorAdapter(), "publish", "IU-0006", callLog)
         notificationAdapter = recordCalls(NotificationAdapter(), "publishWarning", "IU-0007", callLog)
         decisionLogger = recordCalls(DecisionLoggerStub(), "log", "IU-0008", callLog)
-        orchestrator = SafetyKernelOrchestrator(
+        orchestrator = buildOrchestrator(
             freshnessMonitor=freshnessMonitor,
             stateManager=stateManager,
             outputHoldActuator=outputHoldActuator,
@@ -159,13 +186,30 @@ class TestSafetyKernelOrchestratorEvaluateCycleNormalPath(unittest.TestCase):
             outputAdapter=outputAdapter,
             notificationAdapter=notificationAdapter,
             decisionLogger=decisionLogger,
+            crashMonitor=crashMonitor,
+            approachRiskEvaluator=approachRiskEvaluator,
+            overrideManager=overrideManager,
+            fireMonitor=fireMonitor,
         )
         input1 = normalizedInput(validField(1.000), validField(True), validField(False))
 
         orchestrator.evaluateCycle(input1, 1.000)
 
         self.assertEqual(
-            callLog, ["IU-0002", "IU-0003", "IU-0005", "IU-0004", "IU-0006", "IU-0007", "IU-0008"]
+            callLog,
+            [
+                "IU-0002",
+                "IU-0003",
+                "IU-0010",
+                "IU-0011",
+                "IU-0012",
+                "IU-0013",
+                "IU-0005",
+                "IU-0004",
+                "IU-0006",
+                "IU-0007",
+                "IU-0008",
+            ],
         )
 
     def testComposesInputValidFromTimestampAndIgnitionFieldsForArbiter(self):
@@ -184,15 +228,7 @@ class TestSafetyKernelOrchestratorEvaluateCycleNormalPath(unittest.TestCase):
             return originalArbitrate(stateResult, inputValid, candidateCommands)
 
         commandArbiter.arbitrate = spyArbitrate
-        orchestrator = SafetyKernelOrchestrator(
-            freshnessMonitor=FreshnessMonitor(),
-            stateManager=StateManager(),
-            outputHoldActuator=OutputHoldActuator(),
-            commandArbiter=commandArbiter,
-            outputAdapter=OutputActuatorAdapter(),
-            notificationAdapter=NotificationAdapter(),
-            decisionLogger=DecisionLoggerStub(),
-        )
+        orchestrator = buildOrchestrator(commandArbiter=commandArbiter)
         input1 = normalizedInput(invalidField(None), validField(True), validField(False))
 
         orchestrator.evaluateCycle(input1, 1.000)
@@ -210,15 +246,7 @@ class TestSafetyKernelOrchestratorEvaluateCycleErrorHandling(unittest.TestCase):
         @case Negative — 10.2절 방어적 정책(강제 FAULT, errorOccurred=True)을 검증
         @breaks 하위 컴포넌트 예외가 evaluateCycle() 밖으로 전파되는 회귀(안전 커널 전체 중단)
         """
-        orchestrator = SafetyKernelOrchestrator(
-            freshnessMonitor=RaisingFreshnessMonitor(),
-            stateManager=StateManager(),
-            outputHoldActuator=OutputHoldActuator(),
-            commandArbiter=CommandArbiter(),
-            outputAdapter=OutputActuatorAdapter(),
-            notificationAdapter=NotificationAdapter(),
-            decisionLogger=DecisionLoggerStub(),
-        )
+        orchestrator = buildOrchestrator(freshnessMonitor=RaisingFreshnessMonitor())
         input1 = normalizedInput(validField(1.000), validField(True), validField(False))
 
         result = orchestrator.evaluateCycle(input1, 1.000)
@@ -236,11 +264,7 @@ class TestSafetyKernelOrchestratorEvaluateCycleErrorHandling(unittest.TestCase):
         @case Negative — 발행 실패가 이미 확정된 안전 출력을 무효화하지 않는지 검증
         @breaks 발행 단계 예외가 evaluateCycle() 밖으로 전파되거나 판정 결과를 훼손하는 회귀
         """
-        orchestrator = SafetyKernelOrchestrator(
-            freshnessMonitor=FreshnessMonitor(),
-            stateManager=StateManager(),
-            outputHoldActuator=OutputHoldActuator(),
-            commandArbiter=CommandArbiter(),
+        orchestrator = buildOrchestrator(
             outputAdapter=RaisingOutputActuatorAdapter(),
             notificationAdapter=RaisingNotificationAdapter(),
             decisionLogger=RaisingDecisionLogger(),
@@ -253,6 +277,180 @@ class TestSafetyKernelOrchestratorEvaluateCycleErrorHandling(unittest.TestCase):
         self.assertFalse(result.errorOccurred)
         self.assertEqual(result.confirmedOutput.left, LockCommand.LOCK)
         self.assertEqual(result.confirmedOutput.right, LockCommand.LOCK)
+
+
+class TestSafetyKernelOrchestratorPhase2Wiring(unittest.TestCase):
+    """IU-0009 Phase2 신규 호출/조립 단계 종단 검증(실제 IU-0010~0013 협력 객체 사용)."""
+
+    def testCrashConfirmedProducesReleaseOnBothDoors(self):
+        """!
+        @brief crash_status=CONFIRMED는 실제 체인을 거쳐 양쪽 문 모두 RELEASE로 확정된다.
+        @technique 유스케이스 테스트(Use Case Testing) — SWR-007(a) 긴급해제 종단 경로
+        @case Positive — IU-0010->assembleCandidateCommands->IU-0005->IU-0004 실제 배선을 검증
+        @breaks CONFIRMED 입력에도 LOCK이 유지되는 회귀(긴급해제 배선 누락)
+        """
+        orchestrator = buildOrchestrator()
+        input1 = normalizedInput(
+            validField(1.000),
+            validField(True),
+            validField(False),
+            crashStatusField=validField(CrashStatus.CONFIRMED),
+        )
+
+        result = orchestrator.evaluateCycle(input1, 1.000)
+
+        self.assertEqual(result.confirmedOutput.left, LockCommand.RELEASE)
+        self.assertEqual(result.confirmedOutput.right, LockCommand.RELEASE)
+
+    def testLeftApproachRiskLocksOnlyLeftDoor(self):
+        """!
+        @brief 좌측 접근위험만 True이면 좌측만 LOCK 유지, 우측은 영향받지 않는다(SWR-009 종단 검증).
+        @technique 유스케이스 테스트(Use Case Testing) — SWR-005 좌측 억제 종단 경로
+        @case Positive — IU-0011->assembleCandidateCommands->IU-0005 실제 배선을 검증
+        @breaks 좌측 접근위험이 우측 출력에까지 영향을 주는 회귀
+        """
+        orchestrator = buildOrchestrator()
+        input1 = normalizedInput(
+            validField(1.000),
+            validField(True),
+            validField(False),
+            leftApproachRiskField=validField(True),
+            rightApproachRiskField=validField(False),
+        )
+
+        result = orchestrator.evaluateCycle(input1, 1.000)
+
+        self.assertEqual(result.confirmedOutput.left, LockCommand.LOCK)
+        self.assertEqual(result.confirmedOutput.right, LockCommand.LOCK)
+
+    def testFireDetectedProducesReleaseOnBothDoors(self):
+        """!
+        @brief fire_detected=True는 실제 체인을 거쳐 양쪽 문 모두 RELEASE로 확정된다(SWR-017a).
+        @technique 유스케이스 테스트(Use Case Testing) — SWR-017 강제해제 종단 경로
+        @case Positive — IU-0013->assembleCandidateCommands->IU-0005->IU-0004 실제 배선을 검증
+        @breaks fire_detected=True에도 LOCK이 유지되는 회귀(강제해제 배선 누락)
+        """
+        orchestrator = buildOrchestrator()
+        input1 = normalizedInput(
+            validField(1.000),
+            validField(True),
+            validField(False),
+            fireField=validField(True),
+            overtempField=validField(False),
+            adultField=validField(False),
+        )
+
+        result = orchestrator.evaluateCycle(input1, 1.000)
+
+        self.assertEqual(result.confirmedOutput.left, LockCommand.RELEASE)
+        self.assertEqual(result.confirmedOutput.right, LockCommand.RELEASE)
+
+    def testStateFaultBlocksPhase2CandidatesEvenWithCrashConfirmed(self):
+        """!
+        @brief state==FAULT이면 crash_status=CONFIRMED 후보도 전부 차단된다(8.5절 FAULT 최우선 확정).
+        @technique 결정테이블 테스트(Decision Table Testing) — 결정표 I, FAULT와 강한 Phase2 신호 동시 발생
+        @case Negative — FAULT가 Phase2 후보보다 항상 우선한다는 종단 배선을 검증
+        @breaks FAULT 상태에서도 강한 Phase2 신호가 출력을 바꿔버리는 회귀
+        """
+        orchestrator = buildOrchestrator()
+        input1 = normalizedInput(
+            validField(1.000),
+            validField(True),
+            validField(True),
+            crashStatusField=validField(CrashStatus.CONFIRMED),
+        )
+
+        result = orchestrator.evaluateCycle(input1, 1.000)
+
+        self.assertEqual(result.stateResult.state, SystemState.FAULT)
+        self.assertEqual(result.confirmedOutput.left, LockCommand.LOCK)
+        self.assertEqual(result.confirmedOutput.right, LockCommand.LOCK)
+
+
+class TestSafetyKernelOrchestratorAssembleCandidateCommands(unittest.TestCase):
+    """IU-0009.assembleCandidateCommands() 결정표 J 조립 계약 검증(정적 메서드, 6.7절)."""
+
+    def testIncludesCrashCandidateWhenPresent(self):
+        """!
+        @brief crashResult.releaseCandidate가 있으면 조립 결과에 포함된다.
+        @technique 결정테이블 테스트(Decision Table Testing) — 결정표 J, IU-0010 행
+        @case Positive — 충돌 후보가 조립 리스트에 항상 포함되는지 검증
+        @breaks crashResult에 후보가 있는데도 조립 결과에서 누락되는 회귀
+        """
+        crashMonitor = CrashMonitor()
+        approachRiskEvaluator = ApproachRiskEvaluator()
+        overrideManager = ApproachRiskOverrideManager()
+        fireMonitor = FireOvertempOccupantMonitor()
+        crashResult = crashMonitor.evaluate(validField(CrashStatus.CONFIRMED), 1.0)
+        approachResult = approachRiskEvaluator.evaluate(validField(False), validField(False))
+        overrideDecision = overrideManager.decide(False, False, False, False, 1.0)
+        forcedReleaseResult = fireMonitor.evaluate(validField(False), validField(False), validField(False))
+
+        candidates = SafetyKernelOrchestrator.assembleCandidateCommands(
+            crashResult, approachResult, overrideDecision, forcedReleaseResult
+        )
+
+        self.assertEqual(candidates, [crashResult.releaseCandidate])
+
+    def testExcludesLeftSuppressCandidateWhenLeftOverrideActive(self):
+        """!
+        @brief leftOverrideActive=True이면 leftSuppressCandidate가 조립 결과에서 철회된다(결정표 J).
+        @technique 결정테이블 테스트(Decision Table Testing) — 결정표 J, override 철회 행
+        @case Negative — override가 LOCK 후보를 "철회"만 하는 6.7절 계약을 검증
+        @breaks override가 활성인데도 LOCK 후보가 여전히 조립 결과에 남는 회귀
+        """
+        approachRiskEvaluator = ApproachRiskEvaluator()
+        overrideManager = ApproachRiskOverrideManager()
+        crashMonitor = CrashMonitor()
+        fireMonitor = FireOvertempOccupantMonitor()
+        crashResult = crashMonitor.evaluate(validField(CrashStatus.NONE), 1.0)
+        approachResult = approachRiskEvaluator.evaluate(validField(True), validField(False))
+        overrideManager.decide(True, False, False, False, 0.0)
+        overrideDecision = overrideManager.decide(True, False, True, False, 5.0)
+        forcedReleaseResult = fireMonitor.evaluate(validField(False), validField(False), validField(False))
+
+        candidates = SafetyKernelOrchestrator.assembleCandidateCommands(
+            crashResult, approachResult, overrideDecision, forcedReleaseResult
+        )
+
+        self.assertEqual(candidates, [])
+
+    def testIncludesForcedReleaseCandidateWhenTriggered(self):
+        """!
+        @brief forcedReleaseResult.releaseCandidate가 있으면 조립 결과에 포함된다.
+        @technique 결정테이블 테스트(Decision Table Testing) — 결정표 J, IU-0013 행
+        @case Positive — 강제해제 후보가 조립 리스트에 항상 포함되는지 검증
+        @breaks forcedReleaseResult에 후보가 있는데도 조립 결과에서 누락되는 회귀
+        """
+        crashMonitor = CrashMonitor()
+        approachRiskEvaluator = ApproachRiskEvaluator()
+        overrideManager = ApproachRiskOverrideManager()
+        fireMonitor = FireOvertempOccupantMonitor()
+        crashResult = crashMonitor.evaluate(validField(CrashStatus.NONE), 1.0)
+        approachResult = approachRiskEvaluator.evaluate(validField(False), validField(False))
+        overrideDecision = overrideManager.decide(False, False, False, False, 1.0)
+        forcedReleaseResult = fireMonitor.evaluate(validField(True), validField(False), validField(False))
+
+        candidates = SafetyKernelOrchestrator.assembleCandidateCommands(
+            crashResult, approachResult, overrideDecision, forcedReleaseResult
+        )
+
+        self.assertEqual(candidates, [forcedReleaseResult.releaseCandidate])
+
+
+class TestSafetyKernelOrchestratorComposeReleaseReRequested(unittest.TestCase):
+    """IU-0009.composeReleaseReRequested() 계약 검증(placeholder, ledger 갭 7)."""
+
+    def testAlwaysReturnsFalseFalsePlaceholder(self):
+        """!
+        @brief OEM-FR-001 미분석으로 항상 (False, False)를 반환한다(5.3절 명시적 placeholder).
+        @technique 동등분할(Equivalence Partitioning) — 인자 없는 함수의 유일한 반환값
+        @case Positive — placeholder가 실제로 (False, False) 고정값인지 검증
+        @breaks 반환값이 (False, False) 외의 값으로 바뀌는 회귀(연결되지 않은 채널을 잘못 활성화)
+        """
+        result = SafetyKernelOrchestrator.composeReleaseReRequested()
+
+        self.assertEqual(result, (False, False))
 
 
 class TestSafetyKernelOrchestratorReset(unittest.TestCase):
@@ -277,6 +475,26 @@ class TestSafetyKernelOrchestratorReset(unittest.TestCase):
         self.assertEqual(result.stateResult.state, SystemState.NORMAL)
         self.assertEqual(result.confirmedOutput.left, LockCommand.LOCK)
         self.assertEqual(result.confirmedOutput.right, LockCommand.LOCK)
+
+    def testResetClearsOverrideManagerSuppressionTimer(self):
+        """!
+        @brief reset()은 IU-0012.reset()도 호출해 억제 타이머 이력을 지운다(8.6절/13장).
+        @technique 상태전이 테스트(State Transition Testing) — 오래된 억제 이력 이후 reset -> 재진입
+        @case Positive — IU-0012가 다른 3개 단위와 함께 reset() 대상에 실제로 포함되는지 검증
+        @breaks reset()이 IU-0012를 초기화하지 않아 오래된 억제 시각이 override 판정을 오염시키는 회귀
+        """
+        orchestrator = buildOrchestrator()
+        leftRiskInput = normalizedInput(
+            validField(1.000), validField(True), validField(False), leftApproachRiskField=validField(True)
+        )
+        orchestrator.evaluateCycle(leftRiskInput, 0.0)
+        orchestrator.evaluateCycle(leftRiskInput, 50.0)
+
+        orchestrator.reset()
+
+        overrideDecision = orchestrator.overrideManager.decide(True, False, True, False, 50.05)
+
+        self.assertTrue(overrideDecision.leftOverrideActive)
 
 
 if __name__ == "__main__":

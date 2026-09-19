@@ -1,0 +1,68 @@
+# 파이프라인 컨텍스트 원장
+
+이 파일은 Main(오케스트레이팅 세션)과 서브에이전트(requirements-analyst, architecture-designer, detailed-designer, coding, integration-tester, sw-system-tester) 간 컨텍스트를 연결하기 위한 공유 로그입니다. **각 서브에이전트는 작업 시작 시 이 파일을 읽고, 작업을 마치면 이 파일 하단에 요약을 append합니다.** Main은 매번 전체 맥락을 프롬프트에 재작성하는 대신 이 파일을 참조하도록 지시해 프롬프트 길이(토큰)를 줄입니다.
+
+## ID 레지스트리 (다음 사용 가능 번호 — 새 ID를 부여하기 전에 반드시 확인)
+
+| 접두사 | 의미 | 다음 사용 가능 번호 | 비고 |
+| --- | --- | --- | --- |
+| `SWR-` | 소프트웨어 요구사항(SWE.1) | `0022` (Phase 2까지 005~009, 013, 017, 021 사용됨) | OEM 추적성 힌트가 있는 SWR 번호는 힌트를 우선 사용 — 빈 번호(019 등)는 향후 Phase에서 채워질 수 있음 |
+| `IF-` | 인터페이스 카탈로그(SWE.2 전용 — SWE.1은 더 이상 이 번호를 부여하지 않음, `requirements-analysis/requirement-schema.md` 참고) | `0020` | Phase 1: 0001~0012, Phase 2: 0013~0019 |
+| `ARC-` | 아키텍처 컴포넌트(SWE.2) | `0014` | Phase 1: 0001~0009, Phase 2: 0010~0013 |
+| `IU-` | 구현 단위(SWE.3) | `0014` | Phase 1: 0001~0009, Phase 2: 0010~0013(ARC-0010~0013과 1:1) |
+| `IT-` | 통합시험 케이스(SWE.5) | `0094` | Phase 1: 0001~0043, Phase 2: 0044~0093 |
+| `ST-FUNC-`/`ST-NFR-` | 시스템시험 케이스(SWE.6) | `ST-FUNC-0031` | Phase 1: ST-FUNC-0001~0013, Phase 2: ST-FUNC-0014~0030 |
+| `ENG-REV-001` 세션/지적사항 | 인스펙션(Common/SUP.1) | SES-0002 / F-0002 | Phase 1: SES-0001/F-0001 사용 |
+
+## 누적 갭 (OEM-A 확인 필요 등 — 여러 Phase에 걸쳐 이월됨, 절대 조용히 해소하지 말 것)
+
+1. **DEGRADED/FAULT 히스테리시스 없음(즉시 재판정)** — OEM 원문 미기재, Phase 1 아키텍처 단계에서 근거와 함께 결정(병렬-상호배타-FAULT우선). 상세설계에서 재확인 후 채택.
+2. **source_timestamp_s 상한/단조성 판정식 미확정** — OEM 원문 미기재. 하한(0.0)만 검증됨.
+3. **경고코드(reason_code) 실제 카탈로그 미확정** — OEM-IF-006에 정의 없음. 현재 "정의된 타입의 비공백 값" 기준으로만 판정.
+4. **SWR-008(crash_status PENDING 처리)은 추론 요구사항** — OEM-SR-001 원문에 직접 기술 없음, OEM-A 확인 필요.
+5. **SWR-006의 override 실제 출력 전환 여부 미기재** — OEM-FR-003 수용기준은 "override 상태/이유코드 생성"만 요구, 실제 RELEASE 전환은 원문 미기재. [SWE.6 재확인, 2026-09-19] `assembleCandidateCommands()`는 override 성립 시에도 억제 후보를 제외할 뿐 별도 RELEASE 후보를 생성하지 않아, 설계상으로도 override가 출력을 RELEASE로 바꾸지 않는다는 것이 시스템 시험(ST-FUNC-0016)에서도 재확인됨.
+6. **SWR-006의 ASIL B/QM 혼합 분류** — OEM 추적성 힌트가 OEM-SR-002(ASIL B)와 OEM-FR-003(QM)을 SWR-006 하나로 묶음. 아키텍처에서 ARC-0012로 격리했으나 근본적으로는 재검토 여지가 있음.
+7. **releaseReRequested 채널(ARC-0012 입력)이 실제 신호에 미연결** — OEM-FR-001(운전자 명령, Phase 4 예정) 분석 전까지 placeholder(항상 False). [SWE.6 재확인, 2026-09-19] 시스템 경계(`InputValidationAdapter.handleCycle()`)에는 이 채널에 대응하는 원시 입력 필드 자체가 없어(`RawCycleInput`에 재입력/해제요청 필드 없음), SWR-006(a)의 "10초 이내 재입력 시 override 성립" 수용기준을 시스템 수준에서 재현할 방법이 전혀 없다 — ST-FUNC-0016(ENG-SWE6-001/002)이 이를 Fail로 명시 기록(IT-0084가 통합 수준에서 이미 문서화한 것과 같은 한계를 시스템 수준에서 재확인).
+8. **ST-FUNC-0009(제안 케이스)의 정식 채택 여부** — 사용자 미확정, 현재 참고용/필수 합격기준 제외로 분리 표기됨.
+9. **시스템 테스트 진입점**: `evaluateCycle()`이 아니라 `InputValidationAdapter.handleCycle()`(원시 입력 전체 체인) 사용 — Phase 1에서 근거와 함께 결정, 이후 Phase도 이 방식을 유지.
+10. **Phase2 이유코드(leftReasonCode/rightReasonCode, triggeredReasonCodes 등)의 실제 Display/Web 발행 경로 미확장** — SWE.3(상세설계)에서 신규 발견. ARC-0007/IF-0011/IF-0004가 Phase2용으로 확장되지 않아, `IU-0007.publishWarning()`은 여전히 StateResult(state/warningReasonCode)만 변환한다. SWR-005/006/017 등의 "이유코드가 기록된다" 수용기준은 현재 ArbitrationResult/각 IU 반환값 직접 관측으로만 충족(Phase1 warningReasonCode 선례와 동일 전략) — 사용자 대면 Display 발행은 범위 밖.
+11. **OEM-IF-002 crash_status 실제 직렬화 타입 미기재** — SWE.3에서 신규 발견. `IU-0001.validateCrashStatusField()`는 문자열 열거형 이름("NONE"/"PENDING"/"CONFIRMED")으로 가정(OEM-IF-002 원문 표기 형태에 근거). 실제 타입이 다르면(예: 정수 코드) 이 함수만 교체하면 되므로 영향은 국소적이나, 확정 전까지 확인 필요.
+
+### 이번 Phase(SWE.3)에서 SW 설계 재량으로 확정한 사항(갭 아님 — 근거와 함께 확정, Phase1 8.2/8.3절과 동일한 성격)
+
+- crash_status/접근위험(좌우)/화재계열 6개 신규 필드가 valid=False일 때의 공통 처리 원칙: "새 능동 후보(LOCK/RELEASE)를 생성하지 않는다"(대체가 아니라 거절) — Phase1 sensor_fault의 "대체" 정책과 의도적으로 다름(근거: ENG-SWE3-001 10.4절).
+- ARC-0012(override 판정기) 억제 재시작 시 타이머 리셋 규칙: risk가 False로 전이되면 즉시 리셋, 재진입 시 새 10초 윈도우 시작(근거: ENG-SWE3-001 6.11절).
+- IU-0005에서 동일 문에 동일 최소 priority 후보가 2개 이상 존재하는 경우: 설계상 발생 불가한 내부 불변조건 위반으로 간주해 `ValueError`를 발생시키고 IU-0009가 FAULT로 강제(근거: ENG-SWE3-001 5.2절/7장 결정표 I).
+- Phase2 candidateCommands와 FAULT/DEGRADED 게이트의 관계: FAULT는 Phase2 후보보다 항상 우선(차단), DEGRADED는 Phase2 후보를 제한하지 않음(근거: ENG-SWE3-001 8.5절 — 단, 이 결정의 실제 안전 적정성은 OEM 근거 부재로 확인 필요로 별도 유지).
+
+## 문제 해결 이력 (problem-solver가 개입한 경우)
+
+(아직 없음 — `problem-solver` 서브에이전트가 개입할 때마다 이 절에 날짜/증상/재발 횟수/근본원인/조치/검증 결과를 append합니다.)
+
+## 게이트별 진행 로그
+
+### Phase 1 — 안전 커널 (SWR-013, SWR-021) — 완료, `main`에 병합(PR #4, 커밋 `6e97be6`)
+
+- SWE.1(2026-09-18, requirements-analyst): SWR-013(입력유효성/freshness), SWR-021(sensor_fault fail-freeze) 작성. `ENG-SWE1-001` 최초 작성.
+- SWE.2(2026-09-18, architecture-designer): 헥사고날+컴포넌트기반/모니터-액추에이터 선택. ARC-0001~0009, IF-0001~0012. Command Arbiter/로거 확장 골격만 정의.
+- SWE.3(2026-09-18, detailed-designer): IU-0001~0009 함수 계약. 평가주기 50ms, 부팅 초기값 LOCK/LOCK 확정.
+- 구현(2026-09-18, coding): `src/ngv/` 최초 작성. 52개 단위테스트, 품질 게이트 전부 통과.
+- SWE.5(2026-09-18, integration-tester): 43개 케이스, 문장/분기/함수/Call 커버리지 100%.
+- SWE.6(2026-09-18, sw-system-tester): 13개 케이스(ST-FUNC-0001~0013), 진입점을 `handleCycle()`로 결정.
+
+### Phase 2 — 안전 긴급 대응 (SWR-005/006/007/008/009/017) — 진행 중, 브랜치 `phase-2-emergency-response`
+
+- SWE.1(2026-09-19, requirements-analyst): SWR-005~009, 017 작성. `ENG-SWE1-001` v0.2. **IF- 번호 충돌 발견**(SWE.1이 IF-0003~0005를 독자 부여해 SWE.2의 기존 IF-0003/0004와 충돌) → Main이 직접 정정(SWE.1은 더 이상 IF- 번호를 부여하지 않도록 스킬 규칙 수정, `requirements-analysis/requirement-schema.md`).
+- SWE.2(2026-09-19, architecture-designer): ARC-0010(충돌감시)/0011(접근위험평가)/0012(override판정기)/0013(화재등감시) 신규, IF-0013~0019 신규(위 정정된 번호 정책 적용), Command Arbiter 우선순위 규칙 3종 구현(충돌>접근위험>화재등). **서브에이전트가 `ENG-TRC-001` Architecture 열 갱신 전에 사용자에 의해 중단됨** → Main이 아키텍처 문서 12/14장 매핑을 직접 대조해 TRC-001 7개 행 완성(2026-09-19).
+- SWE.3(2026-09-19, detailed-designer): `IU-0010`(충돌감시)~`IU-0013`(화재등감시) 신규 완전 상세설계, `IU-0005`(Command Arbiter) 상세설계 갱신(Phase1의 "candidateCommands 항상 빈 리스트/비어있지 않으면 NotImplementedError" 계약을 문(door)별 우선순위 선택 알고리즘으로 완전히 대체 — coding 단계에서 `tests/test_command_arbiter.py`의 해당 테스트 갱신 필요), `IU-0001`/`IU-0009` 갱신(IF-0013~0019 반영). 공통 자료형 확장(CandidateCommand, CrashEvaluationResult, ApproachRiskResult, OverrideDecision, ForcedReleaseResult, Door, CrashStatus), 정책 의사결정표 6종 신규(E~J), ARC-0012 상태전이(문별 억제 타이머) 신설, 오류/방어 동작 확장. `ENG-SWE3-001` v0.2(docx-js로 전체 재생성, Phase1 내용 보존+Phase2 확장), `ENG-SWE3-002`(drawio) 갱신, `ENG-TRC-001` Detailed Design/Coverage 열 7개 행(SWR-005~009/017) 채움. 신규 갭 2건(위 누적 갭 10/11) 발견, SW 설계 재량 확정 4건(위 별도 절 참조). 외부 Python 의존성 없음 확인 — `ENG-SBOM-001` 계속 생략(Phase1과 동일 근거).
+- 구현(2026-09-19, coding, tdd 스킬): IU-0010~0013 신규(`src/ngv/core/crash_monitor.py`, `approach_risk_evaluator.py`, `approach_risk_override_manager.py`, `fire_overtemp_occupant_monitor.py`), IU-0001 갱신(`validateCrashStatusField` 신규 + `normalizeCycle` 9필드 확장), IU-0005 갱신(`src/ngv/core/command_arbiter.py` — Phase1 "candidateCommands 있으면 NotImplementedError" 계약을 문별 우선순위 선택[`selectForDoor`, priority 최소값, 동일 priority 충돌 시 ValueError]으로 완전 대체), IU-0009 갱신(`src/ngv/app/safety_kernel_orchestrator.py` — IU-0010~0013 호출/candidateCommands 조립/`composeReleaseReRequested` placeholder 추가, `reset()`에 IU-0012 포함). 공통 자료형(`ngv/domain/types.py`)·상수(`ngv/domain/constants.py`) Phase2 확장(CrashStatus/Door/CandidateCommand/CrashEvaluationResult/ApproachRiskResult/OverrideDecision/ForcedReleaseResult, PRIORITY_*/OVERRIDE_WINDOW_S/REASON_CODE_* 등) — RawCycleInput/NormalizedSafetyInput 신규 필드는 하위호환 기본값(raw=None→검증 시 MISSING, normalized=MISSING FieldValidationResult)으로 Phase1 호출부 무변경 유지. TDD: 각 IU마다 Red(실패 확인)→Green→Refactor 순서 준수, `tests/test_command_arbiter.py`는 낡은 NotImplementedError 테스트를 새 계약 테스트로 전면 교체(단순 삭제 아님). 부수 갱신(로직 변경 없이 생성자/데이터클래스 확장에 따른 기계적 동기화만): `tests_integration/it_helpers.py`·`tests_system/st_helpers.py`(오케스트레이터 생성자에 IU-0010~0013 실물 추가), `tests_integration/test_it_step6_orchestrator_integration.py`(직접 생성 5곳에 동일 추가), `tests_integration/test_it_step4_command_arbiter.py`의 IT-0020(Phase1 NotImplementedError 계약 검증을 Phase2 신규 계약 검증으로 교체 — IU-0005와 동일 사유). 품질 게이트 5종 전부 실측 통과(radon cc: 전 함수 복잡도 ≤10; 함수별 순수코드라인 ≤50[최대 40, `__init__`]; pylint duplicate-code 위반 0; pylint invalid-name 위반 0; radon raw 주석비율 34~41%). 전체 회귀 스위트 `python -m unittest discover -p "test_*.py"` 154개 전량 Pass(단위 98 + 통합 43 + 시스템 13), 회귀 없음. `ENG-TRC-001` Code/SWE.4/Coverage 열 갱신(SWR-005/006/007/008/009/017 대상 7개 행 + SWR-013/021 두 행에 Phase2 갱신 각주) 및 Change History에 리비전 0.9 추가. 신규 갭 없음(설계 단계에서 이미 확정된 재량 사항을 그대로 구현) — 다만 IT-0020/it_helpers.py/st_helpers.py 등 SWE.5/SWE.6 산출물의 기계적 동기화는 본래 담당(integration-tester/sw-system-tester) 영역을 coding이 최소 범위로 대신 처리했다는 점을 다음 게이트(SWE.5)에서 재확인 필요. SWE.5/SWE.6(Phase2용 신규 IT/ST 케이스 작성)는 아직 시작 안 함(다음 게이트).
+- SWE.5(2026-09-19, integration-tester): ENG-SWE2-001 v0.2 11장 8~14단계 통합 순서를 그대로 따라 `IT-0044~IT-0093`(50건) 신규 설계·실행(`tests_integration/test_it_step8_crash_monitor.py`~`test_it_step14_orchestrator_phase2_integration.py`), 기존 `IT-0020`을 IU-0005 Phase2 계약(문별 우선순위 선택)에 맞춰 갱신(`tests_integration/test_it_step4_command_arbiter.py`). `it_helpers.py`에 Phase2 헬퍼(`buildPhase2RawCycleInput`/`buildPhase2NormalizedInput`/`buildCandidateCommand` 등) 추가. ASIL B 경로(SWR-005/007/009, IU-0010/0011/0005) 오류 주입 포함(None 상위 계약 위반→ValueError, invalid 필드→방어적 무시, FAULT 게이트가 Phase2 후보 항상 차단). 전체 회귀 `python -m unittest discover -p "test_*.py"` 204개(단위98+통합93+시스템13) 전량 Pass. **커버리지 실측**(coverage.py --branch --source=src/ngv + radon cc -j + ast Call 노드 대조, src/ngv 전체 15개 파일 기준): 함수 커버리지 **47/47(100%)**, 문/분기 커버리지 100%(411/411, 76/76), Call 커버리지는 coverage.py 직접실측 45/48(93.75%) + 나머지 3개(`safety_kernel_orchestrator.py:206-208`, IF-0010/0011/0012 — Phase1부터 이어지는 동일한 coverage.py 람다-튜플 도구 한계, 코드 미변경)는 `IT-0029`/`IT-0087`(recordCalls 실물 계측)·`IT-0031`/`IT-0088`(오류주입 관측) 런타임 증거로 보완 = 총 13개 아키텍처 호출관계(Phase1 9 + Phase2 신규 4, IF-0016~IF-0019) 전부 100% 확인. `ENG-SWE5-001`(docx, 개정 0.2 — 1.2/1.3/5/6/7/9/11/12/13/14장 및 3장 통합순서표 8~14행 갱신)/`ENG-SWE5-002`(xlsx, IT-0044~IT-0093 93행 + IT-0020 갱신)/`ENG-SWE5-003`(xlsx, Integration Results 93행 + RUN-SWE5-002 요약) 전부 v0.2로 갱신. `ENG-TRC-001` SWE.5(G)/Coverage(I) 열 7개 행(OEM-SR-001/SR-002/FR-003/FR-005, SWR-005/006/007/008/009/017) 갱신, Change History 리비전 1.0 추가. **세션 중 자가 발견·정정한 작업 실수**: (1) xlsx 편집 시 헤더 행 오프셋을 1행 오인해 `ENG-SWE5-002`의 IT-0020 갱신을 엉뚱한 행(원래 IT-0021 행)에 덮어써 IT-0021 데이터가 일시 유실됨 — 같은 세션에서 발견해 IT-0020/IT-0021 두 행 모두 원본 근거로 정정 완료(정정 후 IT-0001~IT-0093 93행 순번/중복 없음 재검증). (2) docx 편집 시 5/6/7/9/11/12/13/14장 본문에 추가한 Phase2 문단이 "목차" 절의 평문 챕터명과 텍스트가 같아 검색이 목차 줄에 먼저 매칭되면서 10개 문단 전부가 엉뚱하게 1장 앞(목차 직후)에 몰려 삽입됨 — 같은 세션에서 발견해 Heading 스타일 기준으로만 재탐색하도록 스크립트를 고쳐 각 문단을 올바른 장(챕터)으로 재배치하고 전체 구조를 재검증함. 두 사고 모두 최종 산출물에는 반영되지 않았음(정정 완료 확인 후 보고).
+- **신규 갭**: 없음(설계 단계에서 이미 확정된 재량 사항을 그대로 시험). 기존 갭 7(releaseReRequested placeholder)은 `IT-0084`가 통합 수준에서 실증 문서화(14단계 종단 시나리오에서는 override가 영구적으로 성립 불가함을 직접 관측)했을 뿐 해소되지 않았고, 기존 갭 4(SWR-008 추론 요구사항)도 동일하게 유지(`IT-0045`가 현재 설계대로 PENDING 미개시를 검증).
+- SWE.6(2026-09-19, sw-system-tester): 테스트 베이시스 `ENG-SWE1-001` 4.1/4.2절(SWR-005/006/007/008/009/017), 진입점 `InputValidationAdapter.handleCycle()` 유지(누적 갭 9). `ST-FUNC-0014~0030`(17건) 신규 설계·실행(`tests_system/test_st_func_swr005_006_007_008_009_017.py`, `tests_system/st_helpers.py`에 `buildPhase2RawInput()` 추가). 기법: 요구사항 기반 시험, 경계값분석(300ms 예산/10초 override 경계 — elapsed 정확히 10.000s 및 10.100s로 단위시험 10.0s/10.1s 관례와 정합), 동등분할(crash_status 3값/화재계열 단독 클래스), 결정표기반 시험(3장 우선순위 결정표 기반 상충 조건 — crash>접근위험>화재), 전 조건 조합(좌우 접근위험 2x2 FF/FT/TF/TT, 화재계열 복수 동시발생 대표값), 오류추측. 전체 회귀 `python -m unittest discover -p "test_*.py"` 221개(단위98+통합93+시스템30) 전량 `ok`(unittest 자체 실행은 전부 통과 — ST-FUNC-0016도 "현재의 미충족 동작"을 회귀 고정하는 어서션이므로 코드 실행은 성공). **QA 판정은 17건 중 16 Pass / 1 Fail**: `ST-FUNC-0016`(SWR-006(a), 10초 이내 override)은 시스템 경계에서 요구사항 원문 기준(override 상태/이유코드 생성)을 충족하는지 확인할 수 없어 Fail로 명시 기록 — 근본원인은 이미 알려진 구조적 갭 5/7/10(재입력 채널 부재 + CycleResult 미노출)이며 새로운 코드 결함이 아님(위 누적 갭 5/7 항목에 SWE.6 재확인 각주 추가). 이 외 SWR-005(2건)/SWR-006(b)(1건)/SWR-007(3건)/SWR-008(2건)/SWR-009(4건)/SWR-017(4건)은 전량 Pass. `ENG-SWE6-001`/`ENG-SWE6-002` v0.2로 갱신(Verification Specification/Results/Environment/Summary/Change History 전부). `ENG-TRC-001`의 `SWE.6`(H)/`Coverage`(I) 열 7개 행(OEM-SR-001×2행/SR-002×3행/FR-003/FR-005 → SWR-005/006/007/008/009/017) 갱신 — 이 6개 요구사항(및 Phase1의 SWR-013/021)의 추적 사슬이 SWE.6까지 전부 완성됨(단, SWR-006(a)는 Fail 판정 상태로 완성). 시스템 경계의 공통 한계(모든 신규 케이스 공통 각주로 명시): `CycleResult{confirmedOutput, stateResult, errorOccurred}`가 `ArbitrationResult`의 `leftReasonCode`/`rightReasonCode`를 노출하지 않아(누적 갭 10) 이유코드 "기록" 자체는 시스템 경계에서 직접 관측 불가 — 하위 IT-0044~0093(ENG-SWE5-002/003)에서 이미 실물 관측으로 검증되었음을 각 관련 케이스에 교차 참조. **신규 갭**: 없음(설계/통합 단계에서 이미 식별된 갭 5/7/10을 시스템 수준에서 재확인만 함, 위 누적 갭 항목에 각주로 반영). Phase 2 전체 게이트(SWE.1~SWE.6) 완료.
+
+### 이번 세션 인프라 변경 (2026-09-19)
+
+- LibreOffice 설치(winget). 스킬 자체 recalc.py/render 래퍼는 Windows에서 작동 안 함(AF_UNIX 소켓 가정) — `soffice.exe --headless --convert-to pdf`를 직접 호출하는 방식으로 우회 가능함을 확인.
+- 7개 파이프라인 서브에이전트를 `model: inherit`에서 `model: sonnet`으로 고정(Main이 다른 모델을 쓰더라도 이 7개는 품질 유지).
+- `problem-solver` 서브에이전트 신설(`model: fable`) — 동일 문제가 2회 이상 반복될 때 Main이 호출.
+- Phase 3~5는 사용자 승인 없이 자동으로 PR·머지 진행(사용자 명시적 허가, 2026-09-19).

@@ -2,7 +2,7 @@
 name: aspice-cl2-auditor
 description: 사용자가 프로젝트 산출물을 Automotive SPICE(A-SPICE) 4.1 CL2(Capability Level 2) 기준으로 감사/점검/검토해달라고 요청할 때 사용합니다 — 예: "CL2 점검", "A-SPICE 감사", "산출물 CL2 수준 점검/검토". 호출자는 이 에이전트에게 점검 대상 산출물/디렉터리와, 알고 있다면 해당 프로세스 영역(예: SYS.2, SWE.5, SUP.8, MAN.3)을 함께 알려줘야 합니다. CL1 기본 관행(base practice)만 보는 리뷰나 A-SPICE와 무관한 일반 품질 리뷰에는 이 에이전트를 사용하지 마세요.
 tools: Read, Grep, Glob, Bash, Write, Skill
-model: inherit
+model: sonnet
 skills:
   - aspice-auditor
 ---

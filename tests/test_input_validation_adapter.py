@@ -10,16 +10,10 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from ngv.domain.types import RawCycleInput, SystemState
+from ngv.domain.types import CrashStatus, RawCycleInput, SystemState
 from ngv.adapters.input_validation_adapter import InputValidationAdapter
-from ngv.adapters.decision_logger_stub import DecisionLoggerStub
-from ngv.adapters.notification_adapter import NotificationAdapter
-from ngv.adapters.output_actuator_adapter import OutputActuatorAdapter
-from ngv.core.command_arbiter import CommandArbiter
-from ngv.core.freshness_monitor import FreshnessMonitor
-from ngv.core.output_hold_actuator import OutputHoldActuator
-from ngv.core.state_manager import StateManager
-from ngv.app.safety_kernel_orchestrator import SafetyKernelOrchestrator
+
+from testsupport.orchestrator_factory import buildOrchestrator as buildRealOrchestrator
 
 
 class TestValidateTimestampField(unittest.TestCase):
@@ -176,6 +170,70 @@ class TestApplySensorFaultFailSafe(unittest.TestCase):
         self.assertEqual(result.errorReason, "MISSING")
 
 
+class TestValidateCrashStatusField(unittest.TestCase):
+    """IU-0001.validateCrashStatusField() 계약 검증(Phase2 신규, ENG-SWE3-001 5.1절)."""
+
+    def testAcceptsCrashStatusInstanceDirectly(self):
+        """!
+        @brief CrashStatus 인스턴스가 직접 주어지면 valid=True, value=rawValue로 반환된다(시험 하네스 직접 주입).
+        @technique 동등분할(Equivalence Partitioning) — 이미 타입이 맞는 입력 클래스의 대표값
+        @case Positive — 시험 하네스가 enum 인스턴스를 직접 주입하는 경로를 검증
+        @breaks 이미 CrashStatus인 값을 다시 변환하려다 실패하는 회귀
+        """
+        result = InputValidationAdapter.validateCrashStatusField(CrashStatus.CONFIRMED)
+
+        self.assertTrue(result.valid)
+        self.assertEqual(result.value, CrashStatus.CONFIRMED)
+
+    def testAcceptsValidEnumNameString(self):
+        """!
+        @brief {"NONE","PENDING","CONFIRMED"} 중 하나인 문자열은 valid=True, 대응 CrashStatus로 변환된다.
+        @technique 동등분할(Equivalence Partitioning) — OEM-IF-002 원문 표기 형태(열거형 이름 문자열)
+        @case Positive — 정상 원시 문자열 수용 경로를 검증
+        @breaks "CONFIRMED" 문자열을 valid=False로 잘못 거절하는 회귀
+        """
+        result = InputValidationAdapter.validateCrashStatusField("PENDING")
+
+        self.assertTrue(result.valid)
+        self.assertEqual(result.value, CrashStatus.PENDING)
+
+    def testRejectsNoneAsMissing(self):
+        """!
+        @brief None은 valid=False, errorReason="MISSING"으로 거절된다.
+        @technique 동등분할(Equivalence Partitioning) — 누락 입력 클래스의 대표값
+        @case Negative — 누락 필드 거절 요구를 검증
+        @breaks None을 다른 오류 사유로 잘못 분류하는 회귀
+        """
+        result = InputValidationAdapter.validateCrashStatusField(None)
+
+        self.assertFalse(result.valid)
+        self.assertEqual(result.errorReason, "MISSING")
+
+    def testRejectsNonStringNonEnumTypeAsTypeError(self):
+        """!
+        @brief str도 CrashStatus도 아닌 타입(예: int)은 valid=False, errorReason="TYPE_ERROR"로 거절된다.
+        @technique 오류추측(Error Guessing) — 직렬화 타입 불일치(정수 코드 등)의 대표값
+        @case Negative — 방어적 타입 검사 요구를 검증
+        @breaks 정수 입력에서 예외가 외부로 전파되거나 valid=True가 되는 회귀
+        """
+        result = InputValidationAdapter.validateCrashStatusField(1)
+
+        self.assertFalse(result.valid)
+        self.assertEqual(result.errorReason, "TYPE_ERROR")
+
+    def testRejectsStringOutsideDefinedEnumValuesAsInvalidEnumValue(self):
+        """!
+        @brief 정의된 3개 값 외의 문자열은 valid=False, errorReason="INVALID_ENUM_VALUE"로 거절된다.
+        @technique 경계값분석(Boundary Value Analysis) — 유효 열거값 집합 바로 바깥의 대표값
+        @case Negative — 열거값 카탈로그 밖 문자열 거절 요구를 검증
+        @breaks 정의되지 않은 문자열이 valid=True로 통과되는 회귀
+        """
+        result = InputValidationAdapter.validateCrashStatusField("UNKNOWN")
+
+        self.assertFalse(result.valid)
+        self.assertEqual(result.errorReason, "INVALID_ENUM_VALUE")
+
+
 class TestNormalizeCycle(unittest.TestCase):
     """IU-0001.normalizeCycle() 계약 검증."""
 
@@ -211,18 +269,56 @@ class TestNormalizeCycle(unittest.TestCase):
         self.assertIsNotNone(result.sensorFaultField.value)
         self.assertTrue(result.sensorFaultField.value)
 
+    def testValidatesAllSixPhase2FieldsIndependently(self):
+        """!
+        @brief Phase2 6필드(crash_status/접근위험 좌우/화재/과온/탑승)가 모두 독립적으로 검증된다.
+        @technique 유스케이스 테스트(Use Case Testing) — 9필드 정상 원시 입력의 기본 흐름
+        @case Positive — 5.1절 갱신분(9개 필드로 확장)의 정상 경로를 검증
+        @breaks Phase2 신규 필드 중 일부가 검증되지 않고 누락되는 회귀
+        """
+        rawInput = RawCycleInput(
+            rawSourceTimestamp=1.0,
+            rawIgnitionOn=True,
+            rawSensorFault=False,
+            rawCrashStatus="CONFIRMED",
+            rawLeftApproachRisk=True,
+            rawRightApproachRisk=False,
+            rawFireDetected=True,
+            rawOvertemperatureDetected=False,
+            rawAdultPresent=True,
+        )
 
-def buildRealOrchestrator():
-    """테스트 헬퍼 — 실제(real) IU-0002~0008 협력 객체로 구성된 오케스트레이터를 만든다."""
-    return SafetyKernelOrchestrator(
-        freshnessMonitor=FreshnessMonitor(),
-        stateManager=StateManager(),
-        outputHoldActuator=OutputHoldActuator(),
-        commandArbiter=CommandArbiter(),
-        outputAdapter=OutputActuatorAdapter(),
-        notificationAdapter=NotificationAdapter(),
-        decisionLogger=DecisionLoggerStub(),
-    )
+        result = InputValidationAdapter.normalizeCycle(rawInput, 1.0)
+
+        self.assertTrue(result.crashStatusField.valid)
+        self.assertEqual(result.crashStatusField.value, CrashStatus.CONFIRMED)
+        self.assertTrue(result.leftApproachRiskField.valid)
+        self.assertTrue(result.leftApproachRiskField.value)
+        self.assertTrue(result.rightApproachRiskField.valid)
+        self.assertFalse(result.rightApproachRiskField.value)
+        self.assertTrue(result.fireField.valid)
+        self.assertTrue(result.overtempField.valid)
+        self.assertFalse(result.overtempField.value)
+        self.assertTrue(result.adultField.valid)
+
+    def testPhase2FieldsDefaultToMissingWhenRawInputOmitsThem(self):
+        """!
+        @brief 3필드만 채운 RawCycleInput(하위 호환)에서는 Phase2 6필드가 모두 MISSING으로 검증된다.
+        @technique 경계값분석(Boundary Value Analysis) — RawCycleInput 신규 필드의 기본값(None) 경계
+        @case Negative — 대체(substitution) 없이 거절(reject)되는 10.4절 원칙을 정규화 단계에서 검증
+        @breaks 신규 필드 누락을 조용히 유효한 값으로 처리해버리는 회귀
+        """
+        rawInput = RawCycleInput(rawSourceTimestamp=1.0, rawIgnitionOn=True, rawSensorFault=False)
+
+        result = InputValidationAdapter.normalizeCycle(rawInput, 1.0)
+
+        self.assertFalse(result.crashStatusField.valid)
+        self.assertEqual(result.crashStatusField.errorReason, "MISSING")
+        self.assertFalse(result.leftApproachRiskField.valid)
+        self.assertFalse(result.rightApproachRiskField.valid)
+        self.assertFalse(result.fireField.valid)
+        self.assertFalse(result.overtempField.valid)
+        self.assertFalse(result.adultField.valid)
 
 
 class TestHandleCycle(unittest.TestCase):

@@ -9,8 +9,8 @@
 
 import math
 
-from ngv.domain.constants import SENSOR_FAULT_FAILSAFE_SUBSTITUTE_VALUE
-from ngv.domain.types import FieldValidationResult, NormalizedSafetyInput
+from ngv.domain.constants import ERROR_REASON_INVALID_ENUM_VALUE, SENSOR_FAULT_FAILSAFE_SUBSTITUTE_VALUE
+from ngv.domain.types import CrashStatus, FieldValidationResult, NormalizedSafetyInput
 
 
 class InputValidationAdapter:
@@ -68,6 +68,28 @@ class InputValidationAdapter:
         return FieldValidationResult(value=None, valid=False, rawValue=rawValue, errorReason="TYPE_ERROR")
 
     @staticmethod
+    def validateCrashStatusField(rawValue):
+        """!
+        @brief crash_status 필드를 검증한다(Phase2 신규, OEM-IF-002).
+
+        @param rawValue Any — 원시 crash_status(열거형 이름 문자열로 가정, 5.1절 비고)
+        @return FieldValidationResult[CrashStatus]
+        @exception 없음 — 모든 실패는 valid=False로 표현
+        """
+        if rawValue is None:
+            return FieldValidationResult(value=None, valid=False, rawValue=rawValue, errorReason="MISSING")
+        if isinstance(rawValue, CrashStatus):
+            return FieldValidationResult(value=rawValue, valid=True, rawValue=rawValue)
+        if isinstance(rawValue, str):
+            try:
+                return FieldValidationResult(value=CrashStatus(rawValue), valid=True, rawValue=rawValue)
+            except ValueError:
+                return FieldValidationResult(
+                    value=None, valid=False, rawValue=rawValue, errorReason=ERROR_REASON_INVALID_ENUM_VALUE
+                )
+        return FieldValidationResult(value=None, valid=False, rawValue=rawValue, errorReason="TYPE_ERROR")
+
+    @staticmethod
     def applySensorFaultFailSafe(fieldResult):
         """!
         @brief sensor_fault 필드 자체가 INVALID이면 값을 fail-safe 대체값(True)으로 치환한다.
@@ -90,9 +112,9 @@ class InputValidationAdapter:
         """!
         @brief 원시 입력 3개 필드를 독립적으로 검증하고 sensor_fault에 fail-safe 대체를 적용한다.
 
-        @param rawInput RawCycleInput — 형식 미검증 원시값
+        @param rawInput RawCycleInput — 형식 미검증 원시값(9필드로 확장, Phase2)
         @param nowS float — 초 단위 현재 평가주기 시각(이 알고리즘 자체는 사용하지 않음, 6.2절)
-        @return NormalizedSafetyInput
+        @return NormalizedSafetyInput(9필드로 확장)
         @exception 없음(전면 어댑터의 방어적 계약)
         """
         del nowS  # 6.2절 알고리즘은 nowS를 정규화 판단에 사용하지 않는다(사전조건 검증용 인자).
@@ -102,10 +124,28 @@ class InputValidationAdapter:
             rawInput.rawSensorFault, "sensor_fault"
         )
         sensorFaultField = InputValidationAdapter.applySensorFaultFailSafe(rawSensorFaultField)
+        crashStatusField = InputValidationAdapter.validateCrashStatusField(rawInput.rawCrashStatus)
+        leftApproachRiskField = InputValidationAdapter.validateBooleanField(
+            rawInput.rawLeftApproachRisk, "left_approach_risk"
+        )
+        rightApproachRiskField = InputValidationAdapter.validateBooleanField(
+            rawInput.rawRightApproachRisk, "right_approach_risk"
+        )
+        fireField = InputValidationAdapter.validateBooleanField(rawInput.rawFireDetected, "fire_detected")
+        overtempField = InputValidationAdapter.validateBooleanField(
+            rawInput.rawOvertemperatureDetected, "overtemperature_detected"
+        )
+        adultField = InputValidationAdapter.validateBooleanField(rawInput.rawAdultPresent, "adult_present")
         return NormalizedSafetyInput(
             sourceTimestampField=timestampField,
             ignitionOnField=ignitionField,
             sensorFaultField=sensorFaultField,
+            crashStatusField=crashStatusField,
+            leftApproachRiskField=leftApproachRiskField,
+            rightApproachRiskField=rightApproachRiskField,
+            fireField=fireField,
+            overtempField=overtempField,
+            adultField=adultField,
         )
 
     def handleCycle(self, rawCycleInput, nowS):

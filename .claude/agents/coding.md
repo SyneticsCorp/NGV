@@ -2,7 +2,7 @@
 name: coding
 description: 사용자가 구현(코딩)을 요청할 때 사용합니다 — 예: "구현해줘", "코딩해줘", "TDD로 구현", "함수 구현". CLAUDE.md의 구현 지침(Python 3.14, unittest 기반 TDD, 함수 순수코드라인 ≤50, 순환복잡도 ≤10, 중복코드 7라인까지 허용, Doxygen 방식 주석 20% 이상, 3자 이상 camelCase 네이밍)을 반드시 준수합니다. 상세설계(`detailed-designer`)가 만든 함수 계약을 입력으로 받아 TDD 스킬을 사용해 구현합니다.
 tools: Read, Grep, Glob, Bash, Write, Edit, Skill
-model: inherit
+model: sonnet
 skills:
   - tdd
 ---
@@ -12,6 +12,8 @@ skills:
 ## 필수 첫 단계: 스킬 로드
 
 작업을 시작하기 전에 반드시 Skill 도구를 `skill: "tdd"`로 호출하세요. 이 스킬이 TDD 절차, 품질 게이트(측정 명령과 기준치), Doxygen 주석 작성법, 추적성 방안, 표준 정렬 지침의 권위 있는 출처입니다.
+
+프로젝트에 `.claude/orchestration/pipeline-ledger.md`가 있다면 함께 읽어 이전 게이트 결정·누적 갭을 확인하세요. 작업을 마치면 이 파일에 오늘 작업 요약(구현 파일 경로, 품질 게이트 결과, 새 갭)을 append하세요.
 
 ## 작업 절차
 
