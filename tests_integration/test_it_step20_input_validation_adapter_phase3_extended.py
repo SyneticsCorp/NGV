@@ -16,7 +16,8 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from ngv.adapters.input_validation_adapter import InputValidationAdapter
-from ngv.domain.types import CrashStatus, RawCycleInput
+from ngv.domain.types import CrashStatus
+from tests_integration.it_helpers import buildPhase2RegressionFieldsKwargs, buildPhase3RawCycleInput
 
 
 class TestIT0124ValidVehicleSpeedWithinRangeIsAccepted(unittest.TestCase):
@@ -137,16 +138,11 @@ class TestIT0130NormalizeCycleAssemblesAllTwelveFieldsWithoutRegression(unittest
         @case Positive
         @breaks Phase3 필드 추가로 Phase1/2 필드 정규화 결과가 훼손되는 회귀
         """
-        rawInput = RawCycleInput(
-            rawSourceTimestamp=1.000,
-            rawIgnitionOn=True,
-            rawSensorFault=False,
-            rawCrashStatus="PENDING",
-            rawLeftApproachRisk=True,
-            rawRightApproachRisk=False,
-            rawFireDetected=False,
-            rawOvertemperatureDetected=True,
-            rawAdultPresent=False,
+        rawInput = buildPhase3RawCycleInput(
+            1.000,
+            True,
+            False,
+            **buildPhase2RegressionFieldsKwargs(),
             rawVehicleSpeedKph=3.0,
             rawIsofixLeft=True,
             rawIsofixRight=False,

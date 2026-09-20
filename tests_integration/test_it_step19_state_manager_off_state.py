@@ -155,8 +155,8 @@ class TestIT0123FourStateExhaustiveCombinationTable(unittest.TestCase):
         @breaks 8개 조합 중 하나라도 결정표 K의 우선순위 규칙과 어긋나는 회귀
         """
         manager = StateManager()
-        freshness_stale = buildFreshnessResult(stale=True, elapsedS=0.300, detectedAtS=1.000)
-        freshness_fresh = buildFreshnessResult(stale=False, elapsedS=0.010, detectedAtS=1.000)
+        staleFreshness = buildFreshnessResult(stale=True, elapsedS=0.300, detectedAtS=1.000)
+        freshFreshness = buildFreshnessResult(stale=False, elapsedS=0.010, detectedAtS=1.000)
 
         table = [
             (True, False, False, SystemState.FAULT),
@@ -171,7 +171,7 @@ class TestIT0123FourStateExhaustiveCombinationTable(unittest.TestCase):
 
         for faultValue, ignitionOffValue, staleValue, expectedState in table:
             with self.subTest(fault=faultValue, ignitionOff=ignitionOffValue, stale=staleValue):
-                freshness = freshness_stale if staleValue else freshness_fresh
+                freshness = staleFreshness if staleValue else freshFreshness
                 result = manager.evaluate(
                     freshness, validField(faultValue), validField(not ignitionOffValue), 1.000
                 )

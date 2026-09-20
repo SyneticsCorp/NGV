@@ -15,6 +15,7 @@
 import unittest
 
 from tests_integration.it_helpers import (
+    PHASE3_ORCHESTRATOR_CALL_ORDER,
     SystemState,
     buildPhase3NormalizedInput,
     buildPhase3RawCycleInput,
@@ -49,10 +50,10 @@ class TestIT0131AutoDriveLockFullChainLocksBothDoors(unittest.TestCase):
         @breaks 전체 체인 중 한 연결이 잘못돼 차속 임계가 LOCK으로 반영되지 않는 회귀
         """
         adapter, _ = buildRealAdapterWithOrchestrator()
-        firstInput = it_build(1.000, False)
+        firstInput = itBuild(1.000, False)
         adapter.handleCycle(firstInput, 1.000)
 
-        secondInput = it_build(1.050, True, rawVehicleSpeedKph=3.0)
+        secondInput = itBuild(1.050, True, rawVehicleSpeedKph=3.0)
         result = adapter.handleCycle(secondInput, 1.050)
 
         self.assertFalse(result.errorOccurred)
@@ -74,10 +75,10 @@ class TestIT0132IsofixFullChainLocksLeftIndependentlyOfRight(unittest.TestCase):
         @breaks 좌측 ISOFIX가 우측에도 영향을 주거나 반영되지 않는 회귀(독립성 붕괴)
         """
         adapter, _ = buildRealAdapterWithOrchestrator()
-        firstInput = it_build(1.000, False)
+        firstInput = itBuild(1.000, False)
         adapter.handleCycle(firstInput, 1.000)
 
-        secondInput = it_build(1.050, True, rawIsofixLeft=True)
+        secondInput = itBuild(1.050, True, rawIsofixLeft=True)
         result = adapter.handleCycle(secondInput, 1.050)
 
         self.assertFalse(result.errorOccurred)
@@ -98,7 +99,7 @@ class TestIT0133IgnitionOffFullChainReleasesBothDoorsAndEntersOffState(unittest.
         @breaks 전체 체인 중 한 연결이 잘못돼 ignition-off가 RELEASE/OFF로 반영되지 않는 회귀
         """
         adapter, _ = buildRealAdapterWithOrchestrator()
-        rawInput = it_build(1.000, False)
+        rawInput = itBuild(1.000, False)
 
         result = adapter.handleCycle(rawInput, 1.000)
 
@@ -123,7 +124,7 @@ class TestIT0134IsofixVsIgnitionOffPriorityMediationFullChain(unittest.TestCase)
         @breaks 우선순위 중재가 실제 전체 체인에서 어긋나 LOCK이 선택되는 회귀
         """
         adapter, _ = buildRealAdapterWithOrchestrator()
-        rawInput = it_build(1.000, False, rawIsofixLeft=True)
+        rawInput = itBuild(1.000, False, rawIsofixLeft=True)
 
         result = adapter.handleCycle(rawInput, 1.000)
 
@@ -146,7 +147,7 @@ class TestIT0135ApproachRiskVsIgnitionOffCurrentBehaviorFullChain(unittest.TestC
         @breaks 이 우선순위 관계가 의도치 않게 뒤바뀌는(코드 변경) 회귀 — 뒤바뀌면 갭 16 재검토 필요
         """
         adapter, _ = buildRealAdapterWithOrchestrator()
-        rawInput = it_build(1.000, False, rawLeftApproachRisk=True)
+        rawInput = itBuild(1.000, False, rawLeftApproachRisk=True)
 
         result = adapter.handleCycle(rawInput, 1.000)
 
@@ -185,25 +186,7 @@ class TestIT0136FixedCallOrderAcrossPhase3RealComponents(unittest.TestCase):
 
         orchestrator.evaluateCycle(cycleInput, 1.000)
 
-        self.assertEqual(
-            callLog,
-            [
-                "IF-0006",
-                "IF-0007",
-                "IF-0016",
-                "IF-0017",
-                "IF-0018",
-                "IF-0019",
-                "IF-0023",
-                "IF-0022",
-                "IF-0021",
-                "IF-0008",
-                "IF-0009",
-                "IF-0010",
-                "IF-0011",
-                "IF-0012",
-            ],
-        )
+        self.assertEqual(callLog, PHASE3_ORCHESTRATOR_CALL_ORDER)
 
 
 class TestIT0137InvalidVehicleSpeedFieldDoesNotBlockUnrelatedCrashCandidateFullChain(unittest.TestCase):
@@ -219,7 +202,7 @@ class TestIT0137InvalidVehicleSpeedFieldDoesNotBlockUnrelatedCrashCandidateFullC
         @breaks 무관한 필드의 무효가 다른 컴포넌트의 정당한 후보까지 차단하는 회귀(과도한 결합)
         """
         adapter, _ = buildRealAdapterWithOrchestrator()
-        rawInput = it_build(
+        rawInput = itBuild(
             1.000, True, rawCrashStatus="CONFIRMED", rawVehicleSpeedKph="not-a-number"
         )
 
@@ -242,7 +225,7 @@ class TestIT0138InvalidIsofixFieldDoesNotBlockUnrelatedCrashCandidateFullChain(u
         @breaks 무관한 필드의 무효가 다른 컴포넌트의 정당한 후보까지 차단하는 회귀(과도한 결합)
         """
         adapter, _ = buildRealAdapterWithOrchestrator()
-        rawInput = it_build(1.000, True, rawCrashStatus="CONFIRMED", rawIsofixLeft="not-a-bool")
+        rawInput = itBuild(1.000, True, rawCrashStatus="CONFIRMED", rawIsofixLeft="not-a-bool")
 
         result = adapter.handleCycle(rawInput, 1.000)
 
@@ -266,7 +249,7 @@ class TestIT0139InvalidIgnitionOnFieldDoesNotForceOffFullChain(unittest.TestCase
         @breaks 형식 오류 ignition_on에서도 state=OFF로 잘못 판정되는 회귀(8.8절 결정 붕괴)
         """
         adapter, _ = buildRealAdapterWithOrchestrator()
-        rawInput = it_build(1.000, "not-a-bool")
+        rawInput = itBuild(1.000, "not-a-bool")
 
         result = adapter.handleCycle(rawInput, 1.000)
 
@@ -290,10 +273,10 @@ class TestIT0140Phase1And2AcceptanceStillPassThroughPhase3ExtendedOrchestrator(u
         @breaks Phase3 확장이 Phase1/2 sensor_fault 경로를 훼손하는 회귀
         """
         adapter, _ = buildRealAdapterWithOrchestrator()
-        normalInput = it_build(1.000, True)
+        normalInput = itBuild(1.000, True)
         adapter.handleCycle(normalInput, 1.000)
 
-        faultInput = it_build(1.050, True, rawSensorFault=True)
+        faultInput = itBuild(1.050, True, rawSensorFault=True)
         result = adapter.handleCycle(faultInput, 1.050)
 
         self.assertFalse(result.errorOccurred)
@@ -303,7 +286,7 @@ class TestIT0140Phase1And2AcceptanceStillPassThroughPhase3ExtendedOrchestrator(u
         self.assertEqual(result.confirmedOutput.right, LockCommand.LOCK)
 
 
-def it_build(rawSourceTimestamp, rawIgnitionOn, rawSensorFault=False, **phase3RawFields):
+def itBuild(rawSourceTimestamp, rawIgnitionOn, rawSensorFault=False, **phase3RawFields):
     """!
     @brief 이 파일의 전체 체인 시험이 공통으로 쓰는 RawCycleInput 생성 축약(중복 코드 제거).
            tests_integration.it_helpers.buildPhase3RawCycleInput()에 위임한다.

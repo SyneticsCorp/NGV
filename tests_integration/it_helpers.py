@@ -39,6 +39,29 @@ from ngv.domain.types import (
 
 from testsupport.orchestrator_factory import buildOrchestrator
 
+## Phase2 전체 체인(IT-0087) 기대 호출 순서 — recordCalls 계측 대상 공통 상수(중복 코드 방지).
+PHASE2_ORCHESTRATOR_CALL_ORDER = [
+    "IF-0006",
+    "IF-0007",
+    "IF-0016",
+    "IF-0017",
+    "IF-0018",
+    "IF-0019",
+    "IF-0008",
+    "IF-0009",
+    "IF-0010",
+    "IF-0011",
+    "IF-0012",
+]
+
+## Phase3 전체 체인(IT-0136) 기대 호출 순서 — PHASE2_ORCHESTRATOR_CALL_ORDER에 IU-0016/0015/0014
+## (IF-0023/0022/0021)가 fire monitor 이후·arbitrate 이전에 삽입된 형태(11장 통합 순서 근거).
+PHASE3_ORCHESTRATOR_CALL_ORDER = (
+    PHASE2_ORCHESTRATOR_CALL_ORDER[:6]
+    + ["IF-0023", "IF-0022", "IF-0021"]
+    + PHASE2_ORCHESTRATOR_CALL_ORDER[6:]
+)
+
 
 def validField(value):
     """!
@@ -145,6 +168,21 @@ def buildPhase3RawCycleInput(rawSourceTimestamp, rawIgnitionOn, rawSensorFault, 
            kwargs로 전달(Phase1/2 필드도 함께 전달 가능)
     """
     return buildPhase2RawCycleInput(rawSourceTimestamp, rawIgnitionOn, rawSensorFault, **phase3RawFields)
+
+
+def buildPhase2RegressionFieldsKwargs():
+    """!
+    @brief IT-0081(step13)/IT-0130(step20)이 공유하는 Phase2 6필드 회귀 시험벡터를 만든다
+           (동일한 값을 두 시험 파일에 직접 나열하면 중복 코드가 되므로 이 헬퍼로 대체한다).
+    """
+    return dict(
+        rawCrashStatus="PENDING",
+        rawLeftApproachRisk=True,
+        rawRightApproachRisk=False,
+        rawFireDetected=False,
+        rawOvertemperatureDetected=True,
+        rawAdultPresent=False,
+    )
 
 
 def buildPhase3NormalizedInput(timestampField, ignitionField, sensorFaultField, **phase3Fields):

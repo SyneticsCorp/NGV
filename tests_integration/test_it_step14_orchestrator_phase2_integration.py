@@ -11,6 +11,7 @@
 import unittest
 
 from tests_integration.it_helpers import (
+    PHASE2_ORCHESTRATOR_CALL_ORDER,
     SystemState,
     buildPhase2NormalizedInput,
     buildPhase2RawCycleInput,
@@ -184,22 +185,7 @@ class TestIT0087FixedCallOrderAcrossPhase2RealComponents(unittest.TestCase):
 
         orchestrator.evaluateCycle(cycleInput, 1.000)
 
-        self.assertEqual(
-            callLog,
-            [
-                "IF-0006",
-                "IF-0007",
-                "IF-0016",
-                "IF-0017",
-                "IF-0018",
-                "IF-0019",
-                "IF-0008",
-                "IF-0009",
-                "IF-0010",
-                "IF-0011",
-                "IF-0012",
-            ],
-        )
+        self.assertEqual(callLog, PHASE2_ORCHESTRATOR_CALL_ORDER)
 
 
 class TestIT0088FaultGateOverridesSimultaneousCrashCandidateFullChain(unittest.TestCase):
