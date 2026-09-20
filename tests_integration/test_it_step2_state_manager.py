@@ -17,6 +17,11 @@ from tests_integration.it_helpers import (
 from ngv.core.state_manager import StateManager
 
 
+def ignitionOnField():
+    """테스트 헬퍼 — 정상 ON/유효 ignitionOnField를 만든다(Phase1/2 회귀 케이스의 기본값)."""
+    return validField(True)
+
+
 class TestIT0005NormalDecision(unittest.TestCase):
     """IT-0005 — Trace: IF-0007 / SWR-013(a)"""
 
@@ -30,7 +35,7 @@ class TestIT0005NormalDecision(unittest.TestCase):
         manager = StateManager()
         freshness = buildFreshnessResult(stale=False, elapsedS=0.050, detectedAtS=1.000)
 
-        result = manager.evaluate(freshness, validField(False), 1.000)
+        result = manager.evaluate(freshness, validField(False), ignitionOnField(), 1.000)
 
         self.assertEqual(result.state, SystemState.NORMAL)
         self.assertIsNone(result.warningReasonCode)
@@ -49,7 +54,7 @@ class TestIT0006DegradedDecision(unittest.TestCase):
         manager = StateManager()
         freshness = buildFreshnessResult(stale=True, elapsedS=0.250, detectedAtS=1.000)
 
-        result = manager.evaluate(freshness, validField(False), 1.000)
+        result = manager.evaluate(freshness, validField(False), ignitionOnField(), 1.000)
 
         self.assertEqual(result.state, SystemState.DEGRADED)
         self.assertIsNone(result.warningReasonCode)
@@ -68,7 +73,7 @@ class TestIT0007FaultPriorityOverDegraded(unittest.TestCase):
         manager = StateManager()
         freshness = buildFreshnessResult(stale=True, elapsedS=0.300, detectedAtS=1.000)
 
-        result = manager.evaluate(freshness, validField(True), 1.000)
+        result = manager.evaluate(freshness, validField(True), ignitionOnField(), 1.000)
 
         self.assertEqual(result.state, SystemState.FAULT)
         self.assertEqual(result.warningReasonCode, "SENSOR_FAULT_DETECTED")
@@ -87,7 +92,7 @@ class TestIT0008FaultDetectedWarningCode(unittest.TestCase):
         manager = StateManager()
         freshness = buildFreshnessResult(stale=False, elapsedS=0.010, detectedAtS=1.000)
 
-        result = manager.evaluate(freshness, validField(True), 1.000)
+        result = manager.evaluate(freshness, validField(True), ignitionOnField(), 1.000)
 
         self.assertEqual(result.state, SystemState.FAULT)
         self.assertEqual(result.warningReasonCode, "SENSOR_FAULT_DETECTED")
@@ -112,7 +117,7 @@ class TestIT0009FailSafeSubstitutedSensorFaultWarningCode(unittest.TestCase):
         freshness = buildFreshnessResult(stale=False, elapsedS=0.010, detectedAtS=1.000)
         failSafeField = invalidField(rawValue=None, errorReason="MISSING", substituteValue=True)
 
-        result = manager.evaluate(freshness, failSafeField, 1.000)
+        result = manager.evaluate(freshness, failSafeField, ignitionOnField(), 1.000)
 
         self.assertEqual(result.state, SystemState.FAULT)
         self.assertEqual(result.warningReasonCode, "SENSOR_FAULT_INPUT_INVALID")
@@ -134,7 +139,7 @@ class TestIT0010SensorFaultValueNoneFaultInjection(unittest.TestCase):
         noneValueField = invalidField(rawValue=None, errorReason="MISSING", substituteValue=None)
 
         with self.assertRaises(ValueError):
-            manager.evaluate(freshness, noneValueField, 1.000)
+            manager.evaluate(freshness, noneValueField, ignitionOnField(), 1.000)
 
 
 class TestIT0011FaultThenReturnsToNormalAcrossCycles(unittest.TestCase):
@@ -151,8 +156,8 @@ class TestIT0011FaultThenReturnsToNormalAcrossCycles(unittest.TestCase):
         manager = StateManager()
         freshness = buildFreshnessResult(stale=False, elapsedS=0.010, detectedAtS=1.000)
 
-        first = manager.evaluate(freshness, validField(True), 1.000)
-        second = manager.evaluate(freshness, validField(True), 1.050)
+        first = manager.evaluate(freshness, validField(True), ignitionOnField(), 1.000)
+        second = manager.evaluate(freshness, validField(True), ignitionOnField(), 1.050)
 
         self.assertTrue(first.changedToFault)
         self.assertFalse(second.changedToFault)

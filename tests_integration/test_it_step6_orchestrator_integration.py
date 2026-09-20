@@ -36,21 +36,28 @@ from ngv.core.command_arbiter import CommandArbiter
 from ngv.core.crash_monitor import CrashMonitor
 from ngv.core.fire_overtemp_occupant_monitor import FireOvertempOccupantMonitor
 from ngv.core.freshness_monitor import FreshnessMonitor
+from ngv.core.ignition_off_release_monitor import IgnitionOffReleaseMonitor
+from ngv.core.isofix_forced_lock_monitor import IsofixForcedLockMonitor
 from ngv.core.output_hold_actuator import OutputHoldActuator
 from ngv.core.state_manager import StateManager
+from ngv.core.vehicle_speed_auto_lock_monitor import VehicleSpeedAutoLockMonitor
 from ngv.domain.types import LockCommand
 
 
 def buildPhase2Collaborators():
     """!
     @brief 이 통합시험 파일의 직접 조립(direct construction) 케이스가 공통으로 쓰는
-           Phase2 신규 협력 객체(IU-0010~0013) kwargs를 만든다(중복 코드 제거).
+           Phase2/Phase3 신규 협력 객체(IU-0010~0016) kwargs를 만든다(중복 코드 제거,
+           Phase3 갱신 — IU-0014~0016 기계적 동기화만 추가, 이름은 기존 관례 유지).
     """
     return {
         "crashMonitor": CrashMonitor(),
         "approachRiskEvaluator": ApproachRiskEvaluator(),
         "overrideManager": ApproachRiskOverrideManager(),
         "fireMonitor": FireOvertempOccupantMonitor(),
+        "vehicleSpeedMonitor": VehicleSpeedAutoLockMonitor(),
+        "isofixMonitor": IsofixForcedLockMonitor(),
+        "ignitionOffReleaseMonitor": IgnitionOffReleaseMonitor(),
     }
 
 

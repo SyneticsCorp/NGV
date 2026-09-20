@@ -133,6 +133,31 @@ def buildPhase2NormalizedInput(timestampField, ignitionField, sensorFaultField, 
     )
 
 
+def buildPhase3RawCycleInput(rawSourceTimestamp, rawIgnitionOn, rawSensorFault, **phase3RawFields):
+    """!
+    @brief IF-0001(vehicle_speed_kph 잔여필드)/IF-0002/IF-0020(isofix_left/right) 원시 외부
+           입력(RawCycleInput)을 만든다(11장 15~21단계). buildPhase2RawCycleInput()과 구현이
+           동일하다 — RawCycleInput이 이미 Phase3 필드를 갖고 있어 위임만 하면 되지만(dataclass
+           1개 정의, 재번호 금지 원칙과 동일하게 재정의하지 않음), Phase3 시험 파일의 가독성을
+           위해 이름을 별도로 둔다(중복 코드 아님 — 위임 1줄).
+
+    @param phase3RawFields rawVehicleSpeedKph/rawIsofixLeft/rawIsofixRight 등 필요한 것만
+           kwargs로 전달(Phase1/2 필드도 함께 전달 가능)
+    """
+    return buildPhase2RawCycleInput(rawSourceTimestamp, rawIgnitionOn, rawSensorFault, **phase3RawFields)
+
+
+def buildPhase3NormalizedInput(timestampField, ignitionField, sensorFaultField, **phase3Fields):
+    """!
+    @brief IF-0005 데이터 계약(NormalizedSafetyInput, Phase3 필드 포함)을 만든다(11장 15~19단계).
+           buildPhase2NormalizedInput()에 위임한다(위 함수와 동일한 재사용 근거).
+
+    @param phase3Fields vehicleSpeedField/isofixLeftField/isofixRightField 등 필요한 것만
+           kwargs로 전달(Phase1/2 필드도 함께 전달 가능)
+    """
+    return buildPhase2NormalizedInput(timestampField, ignitionField, sensorFaultField, **phase3Fields)
+
+
 def buildCandidateCommand(door, command, priority, reasonCode="TEST_REASON"):
     """!
     @brief IF-0016~IF-0019가 공통으로 산출하는 CandidateCommand(IF-0008 입력)를 합성한다
@@ -255,6 +280,8 @@ __all__ = [
     "buildRawCycleInput",
     "buildPhase2RawCycleInput",
     "buildPhase2NormalizedInput",
+    "buildPhase3RawCycleInput",
+    "buildPhase3NormalizedInput",
     "buildCandidateCommand",
     "buildRealOrchestrator",
     "buildRealAdapterWithOrchestrator",

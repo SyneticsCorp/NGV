@@ -25,6 +25,9 @@ from ngv.core.approach_risk_evaluator import ApproachRiskEvaluator
 from ngv.core.approach_risk_override_manager import ApproachRiskOverrideManager
 from ngv.core.crash_monitor import CrashMonitor
 from ngv.core.fire_overtemp_occupant_monitor import FireOvertempOccupantMonitor
+from ngv.core.ignition_off_release_monitor import IgnitionOffReleaseMonitor
+from ngv.core.isofix_forced_lock_monitor import IsofixForcedLockMonitor
+from ngv.core.vehicle_speed_auto_lock_monitor import VehicleSpeedAutoLockMonitor
 from ngv.domain.types import LockCommand
 
 
@@ -170,6 +173,12 @@ class TestIT0087FixedCallOrderAcrossPhase2RealComponents(unittest.TestCase):
             approachRiskEvaluator=recordCalls(ApproachRiskEvaluator(), "evaluate", "IF-0017", callLog),
             overrideManager=recordCalls(ApproachRiskOverrideManager(), "decide", "IF-0018", callLog),
             fireMonitor=recordCalls(FireOvertempOccupantMonitor(), "evaluate", "IF-0019", callLog),
+            # Phase3 신규 협력 객체 — IU-0009 생성자 시그니처 확장에 따른 기계적 동기화(호출
+            # 순서 자체는 이 통합시험(IT-0087, Phase2 전용)의 검증 대상이 아니므로 recordCalls로
+            # 감싸지 않는다. Phase3 신규 IT- 케이스 설계는 다음 게이트(integration-tester)의 몫.
+            vehicleSpeedMonitor=VehicleSpeedAutoLockMonitor(),
+            isofixMonitor=IsofixForcedLockMonitor(),
+            ignitionOffReleaseMonitor=IgnitionOffReleaseMonitor(),
         )
         cycleInput = buildPhase2NormalizedInput(validField(1.000), validField(True), validField(False))
 
