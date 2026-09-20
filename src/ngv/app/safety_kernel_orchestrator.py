@@ -1,17 +1,18 @@
 """!
 @file safety_kernel_orchestrator.py
-@brief IU-0009(ARC-0009 안전 커널 평가 오케스트레이터) — 평가주기 조율(Phase2 갱신).
+@brief IU-0009(ARC-0009 안전 커널 평가 오케스트레이터) — 평가주기 조율(Phase3 갱신).
 
-고정 순서(ENG-SWE3-001 3장, Phase2 확장)로 IU-0002~0013을 호출한다: 2-1 freshness ->
-2-2 state -> 2-3 crash(IU-0010) -> 2-4 approachRisk(IU-0011) -> 2-5 override(IU-0012)
--> 2-6 fire(IU-0013) -> (candidateCommands 조립) -> 2-7 arbitrate -> 2-8 confirm ->
-2-9 publish -> 2-10 publishWarning -> 2-11 log. 2-1~2-8단계(판정 핵심 경로, Phase2에서
-IU-0010~0013 포함하도록 확장) 예외는 FAULT를 강제하고, 2-9~2-11단계(QM 어댑터) 예외는
-개별 격리한다(10.2절/10.5절). 예외를 외부로 전파하지 않는다.
+고정 순서(ENG-SWE3-001 3.1절, Phase3 확장)로 IU-0002~0016을 호출한다: 2-1 freshness ->
+2-2 state(ignitionOnField 전달) -> 2-3 crash(IU-0010) -> 2-4 approachRisk(IU-0011) ->
+2-5 override(IU-0012) -> 2-6 fire(IU-0013) -> 2-7 ignitionOff(IU-0016) -> 2-8 isofix(IU-0015)
+-> 2-9 vehicleSpeed(IU-0014) -> (candidateCommands 조립) -> 2-10 arbitrate -> 2-11 confirm ->
+2-12 publish -> 2-13 publishWarning -> 2-14 log. 2-1~2-11단계(판정 핵심 경로, Phase3에서
+IU-0014~0016 포함하도록 재확장) 예외는 FAULT를 강제하고, 2-12~2-14단계(QM 어댑터) 예외는
+개별 격리한다(10.5절/10.10절). 예외를 외부로 전파하지 않는다.
 
 @par 관련 항목
-- 요구사항: SWR-013, SWR-021, SWR-005~009, SWR-017(조율)
-- 상세설계: ENG-SWE3-001 5.3절/6.6절/6.7절/10.2절/10.5절
+- 요구사항: SWR-013, SWR-021, SWR-005~009, SWR-017, SWR-003, SWR-018, SWR-020(조율)
+- 상세설계: ENG-SWE3-001 5.3절/5.3b절/6.7절/6.17절/10.5절/10.10절
 """
 
 from ngv.domain.constants import WARNING_CODE_ORCHESTRATION_ERROR
@@ -43,9 +44,12 @@ class SafetyKernelOrchestrator:
         approachRiskEvaluator,
         overrideManager,
         fireMonitor,
+        vehicleSpeedMonitor,
+        isofixMonitor,
+        ignitionOffReleaseMonitor,
     ):
         """!
-        @brief 협력 객체(IU-0002~0013)를 주입받아 보관한다(Phase2: IU-0010~0013 신규).
+        @brief 협력 객체(IU-0002~0016)를 주입받아 보관한다(Phase3: IU-0014~0016 신규).
 
         @param freshnessMonitor IU-0002 인스턴스
         @param stateManager IU-0003 인스턴스
@@ -58,6 +62,9 @@ class SafetyKernelOrchestrator:
         @param approachRiskEvaluator IU-0011 인스턴스
         @param overrideManager IU-0012 인스턴스
         @param fireMonitor IU-0013 인스턴스
+        @param vehicleSpeedMonitor IU-0014 인스턴스
+        @param isofixMonitor IU-0015 인스턴스
+        @param ignitionOffReleaseMonitor IU-0016 인스턴스
         """
         self.freshnessMonitor = freshnessMonitor
         self.stateManager = stateManager
@@ -70,6 +77,9 @@ class SafetyKernelOrchestrator:
         self.approachRiskEvaluator = approachRiskEvaluator
         self.overrideManager = overrideManager
         self.fireMonitor = fireMonitor
+        self.vehicleSpeedMonitor = vehicleSpeedMonitor
+        self.isofixMonitor = isofixMonitor
+        self.ignitionOffReleaseMonitor = ignitionOffReleaseMonitor
         self.cycleCount = 0
 
     def evaluateCycle(self, normalizedInput, nowS):
@@ -92,17 +102,19 @@ class SafetyKernelOrchestrator:
 
     def runCoreStages(self, normalizedInput, nowS):
         """!
-        @brief 2-1~2-8단계(freshness~confirm, Phase2에서 IU-0010~0013 포함하도록 확장)를 실행하고,
-               예외 시 FAULT를 강제한다.
+        @brief 2-1~2-11단계(freshness~confirm, Phase3에서 IU-0014~0016 포함하도록 재확장)를
+               실행하고, 예외 시 FAULT를 강제한다.
 
-        @param normalizedInput NormalizedSafetyInput(9필드로 확장)
+        @param normalizedInput NormalizedSafetyInput(12필드로 확장)
         @param nowS float
         @return tuple(StateResult, ConfirmedOutput, ArbitrationResult, bool errorOccurred)
         """
         try:
             freshnessResult = self.freshnessMonitor.evaluate(normalizedInput.sourceTimestampField, nowS)
-            stateResult = self.stateManager.evaluate(freshnessResult, normalizedInput.sensorFaultField, nowS)
-            candidateCommands = self.evaluatePhase2Candidates(normalizedInput, nowS)
+            stateResult = self.stateManager.evaluate(
+                freshnessResult, normalizedInput.sensorFaultField, normalizedInput.ignitionOnField, nowS
+            )
+            candidateCommands = self.evaluatePhase3Candidates(normalizedInput, nowS)
             inputValid = self.composeInputValid(normalizedInput)
             arbitrationResult = self.commandArbiter.arbitrate(stateResult, inputValid, candidateCommands)
             confirmedOutput = self.outputHoldActuator.confirm(arbitrationResult, stateResult)
@@ -110,9 +122,11 @@ class SafetyKernelOrchestrator:
         except Exception:  # pylint: disable=broad-exception-caught
             return self.forceFault()
 
-    def evaluatePhase2Candidates(self, normalizedInput, nowS):
+    def evaluatePhase3Candidates(self, normalizedInput, nowS):
         """!
-        @brief 2-3~2-6단계(IU-0010~0013)를 호출하고 candidateCommands를 조립한다(6.7절).
+        @brief 2-3~2-9단계(IU-0010~0013, IU-0016, IU-0015, IU-0014)를 호출하고
+               candidateCommands를 조립한다(6.7절/6.17절, Phase2 evaluatePhase2Candidates()를
+               개명·확장 — Phase2 로직은 그대로 보존).
 
         @param normalizedInput NormalizedSafetyInput
         @param nowS float
@@ -133,18 +147,64 @@ class SafetyKernelOrchestrator:
         forcedReleaseResult = self.fireMonitor.evaluate(
             normalizedInput.fireField, normalizedInput.overtempField, normalizedInput.adultField
         )
-        return self.assembleCandidateCommands(crashResult, approachResult, overrideDecision, forcedReleaseResult)
+        ignitionOffResult = self.ignitionOffReleaseMonitor.evaluate(normalizedInput.ignitionOnField, nowS)
+        isofixResult = self.isofixMonitor.evaluate(
+            normalizedInput.isofixLeftField, normalizedInput.isofixRightField
+        )
+        vehicleSpeedResult = self.vehicleSpeedMonitor.evaluate(normalizedInput.vehicleSpeedField, nowS)
+        return self.assembleCandidateCommands(
+            crashResult,
+            approachResult,
+            overrideDecision,
+            forcedReleaseResult,
+            ignitionOffResult,
+            isofixResult,
+            vehicleSpeedResult,
+        )
 
     @staticmethod
-    def assembleCandidateCommands(crashResult, approachResult, overrideDecision, forcedReleaseResult):
+    def assembleCandidateCommands(
+        crashResult,
+        approachResult,
+        overrideDecision,
+        forcedReleaseResult,
+        ignitionOffResult,
+        isofixResult,
+        vehicleSpeedResult,
+    ):
         """!
-        @brief 이미 계산된 4개 컴포넌트 결과를 리스트 멤버십으로만 결합한다(판정 로직 없음, 결정표 J).
+        @brief 이미 계산된 7개 컴포넌트 결과를 리스트 멤버십으로만 결합한다(판정 로직 없음,
+               결정표 J/6.17절 확장). Phase3 3건(ignitionOff/isofix 좌우/vehicleSpeed)은
+               override 같은 철회 조건 없이 그대로 포함된다.
 
         @param crashResult CrashEvaluationResult
         @param approachResult ApproachRiskResult
         @param overrideDecision OverrideDecision
         @param forcedReleaseResult ForcedReleaseResult
+        @param ignitionOffResult IgnitionOffReleaseResult(Phase3 신규)
+        @param isofixResult ISOFIXLockResult(Phase3 신규)
+        @param vehicleSpeedResult VehicleSpeedLockResult(Phase3 신규)
         @return list[CandidateCommand] — 우선순위 순서는 무의미(IU-0005가 priority로 선택)
+        """
+        candidates = SafetyKernelOrchestrator.assemblePhase2Candidates(
+            crashResult, approachResult, overrideDecision, forcedReleaseResult
+        )
+        candidates.extend(
+            SafetyKernelOrchestrator.assemblePhase3Candidates(ignitionOffResult, isofixResult, vehicleSpeedResult)
+        )
+        return candidates
+
+    @staticmethod
+    def assemblePhase2Candidates(crashResult, approachResult, overrideDecision, forcedReleaseResult):
+        """!
+        @brief Phase2 4개 소스(충돌/좌접근위험/우접근위험/화재 등)를 결정표 J대로 조립한다
+               (assembleCandidateCommands()의 순환복잡도를 낮추기 위한 분리, 11.1절 근거).
+
+        @param crashResult CrashEvaluationResult
+        @param approachResult ApproachRiskResult
+        @param overrideDecision OverrideDecision
+        @param forcedReleaseResult ForcedReleaseResult
+        @return list[CandidateCommand]
         """
         candidates = []
         if crashResult.releaseCandidate is not None:
@@ -155,6 +215,28 @@ class SafetyKernelOrchestrator:
             candidates.append(approachResult.rightSuppressCandidate)
         if forcedReleaseResult.releaseCandidate is not None:
             candidates.append(forcedReleaseResult.releaseCandidate)
+        return candidates
+
+    @staticmethod
+    def assemblePhase3Candidates(ignitionOffResult, isofixResult, vehicleSpeedResult):
+        """!
+        @brief Phase3 4개 소스(ignition-off/좌ISOFIX/우ISOFIX/자동주행잠금)를 결정표 J
+               확장(6.17절)대로 조립한다(철회 조건 없음 — 있으면 항상 포함).
+
+        @param ignitionOffResult IgnitionOffReleaseResult
+        @param isofixResult ISOFIXLockResult
+        @param vehicleSpeedResult VehicleSpeedLockResult
+        @return list[CandidateCommand]
+        """
+        candidates = []
+        if ignitionOffResult.releaseCandidate is not None:
+            candidates.append(ignitionOffResult.releaseCandidate)
+        if isofixResult.leftLockCandidate is not None:
+            candidates.append(isofixResult.leftLockCandidate)
+        if isofixResult.rightLockCandidate is not None:
+            candidates.append(isofixResult.rightLockCandidate)
+        if vehicleSpeedResult.lockCandidate is not None:
+            candidates.append(vehicleSpeedResult.lockCandidate)
         return candidates
 
     @staticmethod

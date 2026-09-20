@@ -80,3 +80,42 @@ REASON_CODE_FORCED_RELEASE = "FORCED_RELEASE"
 
 ## IU-0001.validateCrashStatusField()가 str이지만 정의된 3개 값(NONE/PENDING/CONFIRMED) 외일 때의 오류 사유.
 ERROR_REASON_INVALID_ENUM_VALUE = "INVALID_ENUM_VALUE"
+
+## ignition-off 해제(RELEASE 계열) 후보 우선순위(Phase3 신규). ENG-SWE2-001 9장 우선순위 체인 확정.
+## SWR-007(a) 원문 직접 근거로 crash(1)보다는 낮고 fire(3)보다도 낮으나, ISOFIX/자동주행잠금(5,6)
+## 보다는 높다 — entrapment 방지 취지상 ignition-off가 LOCK 계열보다 우선(SW 설계 재량).
+PRIORITY_IGNITION_OFF_RELEASE = 4
+
+## ISOFIX 강제잠금(LOCK 계열) 후보 우선순위(Phase3 신규). 자동주행잠금보다 근소하게 높은
+## 우선순위(더 구체적인 위험신호) — 영향은 미미(둘 다 LOCK이므로 최종 출력에는 무관, 이유코드
+## 보고 순서에만 영향). ENG-SWE2-001 9장 근거.
+PRIORITY_ISOFIX_FORCED_LOCK = 5
+
+## 자동주행잠금(LOCK 계열) 후보 우선순위(Phase3 신규). 우선순위 체인 전체에서 최저. 상동.
+PRIORITY_AUTO_DRIVE_LOCK = 6
+
+## SWR-003(a)/(b) 원문 수치(3 km/h). 자동주행잠금 차속 임계값. 변경 불가(요구사항 직접 인용).
+AUTO_DRIVE_LOCK_SPEED_THRESHOLD_KPH = 3.0
+
+## ENG-SWE2-001 6.2절 IF-0001 범위(0.0~300.0). vehicle_speed_kph 유효 범위 하한. 변경 불가(아키텍처 직접 인용).
+VEHICLE_SPEED_MIN_KPH = 0.0
+
+## 상동. vehicle_speed_kph 유효 범위 상한.
+VEHICLE_SPEED_MAX_KPH = 300.0
+
+## IU-0014 lockCandidate.reasonCode(ENG-SWE2-001 IF-0021 예시 문구 그대로 채택).
+REASON_CODE_AUTO_DRIVE_LOCK = "AUTO_DRIVE_LOCK"
+
+## IU-0015 leftReasonCode(경고코드 카탈로그 미확정, 갭 3 승계 — SW 자체 정의 문자열).
+REASON_CODE_ISOFIX_LEFT = "ISOFIX_FORCED_LOCK_LEFT"
+
+## IU-0015 rightReasonCode. 상동.
+REASON_CODE_ISOFIX_RIGHT = "ISOFIX_FORCED_LOCK_RIGHT"
+
+## IU-0016 releaseCandidate.reasonCode(ENG-SWE2-001 IF-0023 예시 문구 그대로 채택).
+REASON_CODE_IGNITION_OFF = "IGNITION_OFF"
+
+## IU-0003이 state==OFF일 때 생성하는 StateResult.warningReasonCode(ENG-SWE2-001 7장 시나리오10
+## 근거 — REASON_CODE_IGNITION_OFF와 값은 같으나 별도 네임스페이스, WARNING_CODE_SENSOR_FAULT_*
+## 선례와 동일 관례).
+WARNING_CODE_IGNITION_OFF = "IGNITION_OFF"

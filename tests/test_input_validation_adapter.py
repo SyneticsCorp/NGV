@@ -234,6 +234,98 @@ class TestValidateCrashStatusField(unittest.TestCase):
         self.assertEqual(result.errorReason, "INVALID_ENUM_VALUE")
 
 
+class TestValidateVehicleSpeedField(unittest.TestCase):
+    """IU-0001.validateVehicleSpeedField() 계약 검증(Phase3 신규, ENG-SWE3-001 5.1b절)."""
+
+    def testAcceptsFiniteValueWithinRange(self):
+        """!
+        @brief 0.0~300.0 범위 내의 유한 수치는 valid=True, value=float(rawValue)로 반환된다.
+        @technique 동등분할(Equivalence Partitioning) — 유효 구간의 대표값
+        @case Positive — 정상 차속값 수용 경로를 검증
+        @breaks 유효한 수치를 valid=False로 거절하는 회귀
+        """
+        result = InputValidationAdapter.validateVehicleSpeedField(45.5)
+
+        self.assertTrue(result.valid)
+        self.assertEqual(result.value, 45.5)
+
+    def testRejectsNoneAsMissing(self):
+        """!
+        @brief None은 valid=False, errorReason="MISSING"으로 거절된다.
+        @technique 동등분할(Equivalence Partitioning) — 누락 입력 클래스의 대표값
+        @case Negative — 누락 필드 거절 요구를 검증
+        @breaks None을 valid=True로 잘못 통과시키는 회귀
+        """
+        result = InputValidationAdapter.validateVehicleSpeedField(None)
+
+        self.assertFalse(result.valid)
+        self.assertEqual(result.errorReason, "MISSING")
+
+    def testRejectsNonNumericStringAsTypeError(self):
+        """!
+        @brief 수치로 변환 불가능한 문자열은 valid=False, errorReason="TYPE_ERROR"로 거절된다.
+        @technique 동등분할(Equivalence Partitioning) — 타입 오류 클래스의 대표값
+        @case Negative — 형식 오류 거절 요구를 검증
+        @breaks 문자열 입력에서 예외가 외부로 전파되거나 valid=True가 되는 회귀
+        """
+        result = InputValidationAdapter.validateVehicleSpeedField("fast")
+
+        self.assertFalse(result.valid)
+        self.assertEqual(result.errorReason, "TYPE_ERROR")
+
+    def testRejectsValueBelowMinAsOutOfRange(self):
+        """!
+        @brief 하한(0.0) 미만은 valid=False, errorReason="OUT_OF_RANGE"로 거절된다.
+        @technique 경계값분석(Boundary Value Analysis) — 하한 경계 바로 아래(-0.1)
+        @case Negative — VEHICLE_SPEED_MIN_KPH(0.0) 범위 하한 검사를 검증
+        @breaks 음수 차속을 valid=True로 통과시키는 회귀
+        """
+        result = InputValidationAdapter.validateVehicleSpeedField(-0.1)
+
+        self.assertFalse(result.valid)
+        self.assertEqual(result.errorReason, "OUT_OF_RANGE")
+
+    def testRejectsValueAboveMaxAsOutOfRange(self):
+        """!
+        @brief 상한(300.0) 초과는 valid=False, errorReason="OUT_OF_RANGE"로 거절된다.
+        @technique 경계값분석(Boundary Value Analysis) — 상한 경계 바로 위(300.1)
+        @case Negative — VEHICLE_SPEED_MAX_KPH(300.0) 범위 상한 검사를 검증
+        @breaks 범위를 초과한 차속을 valid=True로 통과시키는 회귀
+        """
+        result = InputValidationAdapter.validateVehicleSpeedField(300.1)
+
+        self.assertFalse(result.valid)
+        self.assertEqual(result.errorReason, "OUT_OF_RANGE")
+
+    def testAcceptsBothRangeBoundaries(self):
+        """!
+        @brief 0.0과 300.0(양쪽 경계값)은 모두 유효하다("이상~이하").
+        @technique 경계값분석(Boundary Value Analysis) — 하한/상한 경계값 자체
+        @case Positive — 경계값 포함 여부를 검증
+        @breaks 경계값 비교 연산자가 <=/>= 대신 </>로 잘못 구현되는 회귀
+        """
+        lowerResult = InputValidationAdapter.validateVehicleSpeedField(0.0)
+        upperResult = InputValidationAdapter.validateVehicleSpeedField(300.0)
+
+        self.assertTrue(lowerResult.valid)
+        self.assertTrue(upperResult.valid)
+
+    def testRejectsNanAndInfinityAsOutOfRange(self):
+        """!
+        @brief NaN/Infinity는 valid=False, errorReason="OUT_OF_RANGE"로 거절된다.
+        @technique 오류추측(Error Guessing) — 계측·직렬화 오류의 전형적 대표값(NaN, Infinity)
+        @case Negative — 비유한 값 거절 요구를 검증(validateTimestampField와 동일한 방어 패턴)
+        @breaks NaN/Infinity를 유효한 차속값으로 통과시키는 회귀
+        """
+        nanResult = InputValidationAdapter.validateVehicleSpeedField(math.nan)
+        infResult = InputValidationAdapter.validateVehicleSpeedField(math.inf)
+
+        self.assertFalse(nanResult.valid)
+        self.assertEqual(nanResult.errorReason, "OUT_OF_RANGE")
+        self.assertFalse(infResult.valid)
+        self.assertEqual(infResult.errorReason, "OUT_OF_RANGE")
+
+
 class TestNormalizeCycle(unittest.TestCase):
     """IU-0001.normalizeCycle() 계약 검증."""
 
@@ -319,6 +411,48 @@ class TestNormalizeCycle(unittest.TestCase):
         self.assertFalse(result.fireField.valid)
         self.assertFalse(result.overtempField.valid)
         self.assertFalse(result.adultField.valid)
+
+
+    def testValidatesAllThreePhase3FieldsIndependently(self):
+        """!
+        @brief Phase3 3필드(vehicle_speed_kph/isofix_left/isofix_right)가 모두 독립적으로 검증된다.
+        @technique 유스케이스 테스트(Use Case Testing) — 12개 필드 정상 원시 입력의 기본 흐름
+        @case Positive — 5.1b절 갱신분(12개 필드로 확장)의 정상 경로를 검증
+        @breaks Phase3 신규 필드 중 일부가 검증되지 않고 누락되는 회귀
+        """
+        rawInput = RawCycleInput(
+            rawSourceTimestamp=1.0,
+            rawIgnitionOn=True,
+            rawSensorFault=False,
+            rawVehicleSpeedKph=5.0,
+            rawIsofixLeft=True,
+            rawIsofixRight=False,
+        )
+
+        result = InputValidationAdapter.normalizeCycle(rawInput, 1.0)
+
+        self.assertTrue(result.vehicleSpeedField.valid)
+        self.assertEqual(result.vehicleSpeedField.value, 5.0)
+        self.assertTrue(result.isofixLeftField.valid)
+        self.assertTrue(result.isofixLeftField.value)
+        self.assertTrue(result.isofixRightField.valid)
+        self.assertFalse(result.isofixRightField.value)
+
+    def testPhase3FieldsDefaultToMissingWhenRawInputOmitsThem(self):
+        """!
+        @brief Phase1/2 스타일 RawCycleInput(하위 호환)에서는 Phase3 3필드가 모두 MISSING으로 검증된다.
+        @technique 경계값분석(Boundary Value Analysis) — RawCycleInput 신규 필드의 기본값(None) 경계
+        @case Negative — 대체(substitution) 없이 거절(reject)되는 10.4절/10.7절 원칙을 검증
+        @breaks 신규 필드 누락을 조용히 유효한 값으로 처리해버리는 회귀
+        """
+        rawInput = RawCycleInput(rawSourceTimestamp=1.0, rawIgnitionOn=True, rawSensorFault=False)
+
+        result = InputValidationAdapter.normalizeCycle(rawInput, 1.0)
+
+        self.assertFalse(result.vehicleSpeedField.valid)
+        self.assertEqual(result.vehicleSpeedField.errorReason, "MISSING")
+        self.assertFalse(result.isofixLeftField.valid)
+        self.assertFalse(result.isofixRightField.valid)
 
 
 class TestHandleCycle(unittest.TestCase):

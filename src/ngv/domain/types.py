@@ -18,11 +18,12 @@ from typing import Any, Optional
 @dataclass(frozen=True)
 class RawCycleInput:
     """!
-    @brief 형식 미검증 원시 Vehicle 입력(OEM-IF-001/002/003/007/009 원문 그대로).
+    @brief 형식 미검증 원시 Vehicle 입력(OEM-IF-001/002/003/007/008/009 원문 그대로).
 
-    Phase2 신규 6필드(rawCrashStatus 등)는 default=None — 호출부가 아직 값을 채우지 않은
-    경우 IU-0001 검증 함수가 그대로 "MISSING"으로 판정하도록 하기 위함이며(4장 invariant),
-    Phase1 3필드 호출부(테스트 등)와의 하위 호환을 목적으로 임의 값을 대체하지 않는다.
+    Phase2 신규 6필드(rawCrashStatus 등)와 Phase3 신규 3필드(rawVehicleSpeedKph 등)는
+    default=None — 호출부가 아직 값을 채우지 않은 경우 IU-0001 검증 함수가 그대로
+    "MISSING"으로 판정하도록 하기 위함이며(4장 invariant), 이전 Phase 호출부(테스트 등)와의
+    하위 호환을 목적으로 임의 값을 대체하지 않는다.
     """
 
     rawSourceTimestamp: Any
@@ -34,6 +35,9 @@ class RawCycleInput:
     rawFireDetected: Any = None
     rawOvertemperatureDetected: Any = None
     rawAdultPresent: Any = None
+    rawVehicleSpeedKph: Any = None
+    rawIsofixLeft: Any = None
+    rawIsofixRight: Any = None
 
 
 @dataclass(frozen=True)
@@ -66,8 +70,8 @@ class NormalizedSafetyInput:
     """!
     @brief IU-0001.normalizeCycle()의 산출물 — 검증 완료 입력.
     @invariant sensorFaultField.value는 항상 not None(10장 fail-safe 대체 규칙에 의해 보장).
-    @invariant Phase2 신규 6필드는 대체 보장이 없다 — valid=False이면 value는 None일 수 있다
-               (10.4절 신규 원칙). default_factory는 하위 호환을 위해 "MISSING"을 채운다.
+    @invariant Phase2/Phase3 신규 필드는 대체 보장이 없다 — valid=False이면 value는 None일 수
+               있다(10.4절/10.7절 원칙). default_factory는 하위 호환을 위해 "MISSING"을 채운다.
     """
 
     sourceTimestampField: FieldValidationResult
@@ -79,6 +83,9 @@ class NormalizedSafetyInput:
     fireField: FieldValidationResult = field(default_factory=buildMissingFieldDefault)
     overtempField: FieldValidationResult = field(default_factory=buildMissingFieldDefault)
     adultField: FieldValidationResult = field(default_factory=buildMissingFieldDefault)
+    vehicleSpeedField: FieldValidationResult = field(default_factory=buildMissingFieldDefault)
+    isofixLeftField: FieldValidationResult = field(default_factory=buildMissingFieldDefault)
+    isofixRightField: FieldValidationResult = field(default_factory=buildMissingFieldDefault)
 
 
 @dataclass(frozen=True)
@@ -95,19 +102,23 @@ class FreshnessResult:
 
 class SystemState(Enum):
     """!
-    @brief 안전 커널 시스템 상태(상호 배타).
+    @brief 안전 커널 시스템 상태(상호 배타). Phase3: OFF 추가(FAULT>OFF>DEGRADED>NORMAL).
     """
 
     NORMAL = "NORMAL"
     DEGRADED = "DEGRADED"
     FAULT = "FAULT"
+    OFF = "OFF"
 
 
 @dataclass(frozen=True)
 class StateResult:
     """!
     @brief IU-0003.evaluate()의 산출물 — 상태 판정 결과.
-    @invariant state==FAULT ⟺ warningReasonCode is not None.
+    @invariant state ∈ {FAULT, OFF} ⟺ warningReasonCode is not None(Phase3 확장 — 기존
+               "state==FAULT ⟺..."에서 OFF 포함으로 확장). changedToFault는 Phase1 의미
+               ("이번 주기에 새로 FAULT로 전이했는가")를 그대로 유지하며, OFF 전이 전용
+               플래그는 추가하지 않는다(어떤 SWR도 요구하지 않음, 13장 구현 경계).
     """
 
     state: SystemState
@@ -157,9 +168,12 @@ class ArbitrationCommand(Enum):
 @dataclass(frozen=True)
 class CandidateCommand:
     """!
-    @brief IU-0010~0013이 생성하는 후보 커맨드(Phase2 신규, IU-0005 입력).
+    @brief IU-0010~0016이 생성하는 후보 커맨드(Phase2/Phase3 신규, IU-0005 입력).
     @invariant command ∈ {LOCK, RELEASE}(NO_CHANGE 금지 — 후보는 항상 명시적 동작).
-    @invariant priority ∈ {1,2,3}(PRIORITY_CRASH/APPROACH_RISK/FIRE_OVERTEMP_OCCUPANT).
+    @invariant priority ∈ {1..6}(Phase3 확장 — PRIORITY_CRASH=1/APPROACH_RISK=2/
+               FIRE_OVERTEMP_OCCUPANT=3/IGNITION_OFF_RELEASE=4/ISOFIX_FORCED_LOCK=5/
+               AUTO_DRIVE_LOCK=6). IU-0005.selectForDoor()의 최소-priority 선택 알고리즘은
+               이 값 범위 확장과 무관하게 코드 변경 없이 그대로 동작한다(OCP, 5.2b절).
     @invariant reasonCode는 비공백 문자열.
     """
 
@@ -221,6 +235,48 @@ class ForcedReleaseResult:
     triggered: bool
     releaseCandidate: Optional[CandidateCommand]
     triggeredReasonCodes: list
+
+
+@dataclass(frozen=True)
+class VehicleSpeedLockResult:
+    """!
+    @brief IU-0014.evaluate()의 산출물(Phase3 신규, IF-0021).
+    @invariant locked=True ⟺ lockCandidate is not None. lockCandidate가 있으면 door=BOTH,
+               command=LOCK, priority=PRIORITY_AUTO_DRIVE_LOCK(6), reasonCode=AUTO_DRIVE_LOCK.
+    """
+
+    locked: bool
+    lockCandidate: Optional[CandidateCommand]
+
+
+@dataclass(frozen=True)
+class ISOFIXLockResult:
+    """!
+    @brief IU-0015.evaluate()의 산출물(Phase3 신규, IF-0022).
+    @invariant leftLockActive ⟺ leftLockCandidate is not None ⟺ leftReasonCode is not None
+               (우측 대칭, 좌우 완전 독립 — SWR-018b, ApproachRiskResult와 동일한 불변조건 패턴).
+    """
+
+    leftLockActive: bool
+    rightLockActive: bool
+    leftLockCandidate: Optional[CandidateCommand]
+    rightLockCandidate: Optional[CandidateCommand]
+    leftReasonCode: Optional[str]
+    rightReasonCode: Optional[str]
+
+
+@dataclass(frozen=True)
+class IgnitionOffReleaseResult:
+    """!
+    @brief IU-0016.evaluate()의 산출물(Phase3 신규, IF-0023).
+    @invariant off=True ⟺ releaseCandidate is not None. releaseCandidate가 있으면 door=BOTH,
+               command=RELEASE, priority=PRIORITY_IGNITION_OFF_RELEASE(4), reasonCode=
+               IGNITION_OFF. off는 SystemState.OFF와 동일한 이름이나 별개 자료형이다(IU-0003이
+               상태 값 자체를 소유, 2장 참조 — 응집도 분리 원칙).
+    """
+
+    off: bool
+    releaseCandidate: Optional[CandidateCommand]
 
 
 @dataclass(frozen=True)

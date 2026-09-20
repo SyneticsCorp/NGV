@@ -57,6 +57,22 @@ def buildPhase2RawInput(rawSourceTimestamp, rawIgnitionOn, rawSensorFault, **pha
     )
 
 
+def buildPhase3RawInput(rawSourceTimestamp, rawIgnitionOn, rawSensorFault, **phase3RawFields):
+    """!
+    @brief OEM-IF-001(vehicle_speed_kph 잔여필드)/OEM-IF-008(isofix_left/right)/OEM-IF-009
+           (ignition_on 출력결정) Phase3 원시 입력을 포함하는 RawCycleInput을 만든다(형식
+           검증 전 값). buildPhase2RawInput()과 구현이 동일하다 — RawCycleInput이 이미
+           Phase3 필드를 갖고 있어 위임만 하면 되지만(dataclass 1개 정의, 재번호 금지 원칙과
+           동일하게 재정의하지 않음), Phase3 시험 파일의 가독성을 위해 이름을 별도로 둔다
+           (중복 코드 아님 — 위임 1줄, tests_integration/it_helpers.py::buildPhase3RawCycleInput
+           과 동일 관례).
+
+    @param phase3RawFields rawVehicleSpeedKph/rawIsofixLeft/rawIsofixRight 등 필요한 것만
+           kwargs로 전달(Phase1/2 필드도 함께 전달 가능)
+    """
+    return buildPhase2RawInput(rawSourceTimestamp, rawIgnitionOn, rawSensorFault, **phase3RawFields)
+
+
 def buildSystemUnderTest():
     """!
     @brief 시스템 테스트 대상 — ARC-0001(입력 검증) + ARC-0002~0008(오케스트레이터 실물 조립)
@@ -73,5 +89,6 @@ __all__ = [
     "SystemState",
     "buildRawInput",
     "buildPhase2RawInput",
+    "buildPhase3RawInput",
     "buildSystemUnderTest",
 ]

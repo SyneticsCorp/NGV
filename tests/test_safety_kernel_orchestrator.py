@@ -15,9 +15,12 @@ from ngv.domain.types import (
     ArbitrationCommand,
     CrashStatus,
     FieldValidationResult,
+    IgnitionOffReleaseResult,
+    ISOFIXLockResult,
     LockCommand,
     NormalizedSafetyInput,
     SystemState,
+    VehicleSpeedLockResult,
 )
 from ngv.core.approach_risk_evaluator import ApproachRiskEvaluator
 from ngv.core.approach_risk_override_manager import ApproachRiskOverrideManager
@@ -25,8 +28,11 @@ from ngv.core.command_arbiter import CommandArbiter
 from ngv.core.crash_monitor import CrashMonitor
 from ngv.core.fire_overtemp_occupant_monitor import FireOvertempOccupantMonitor
 from ngv.core.freshness_monitor import FreshnessMonitor
+from ngv.core.ignition_off_release_monitor import IgnitionOffReleaseMonitor
+from ngv.core.isofix_forced_lock_monitor import IsofixForcedLockMonitor
 from ngv.core.output_hold_actuator import OutputHoldActuator
 from ngv.core.state_manager import StateManager
+from ngv.core.vehicle_speed_auto_lock_monitor import VehicleSpeedAutoLockMonitor
 from ngv.adapters.decision_logger_stub import DecisionLoggerStub
 from ngv.adapters.notification_adapter import NotificationAdapter
 from ngv.adapters.output_actuator_adapter import OutputActuatorAdapter
@@ -45,6 +51,22 @@ def invalidField(rawValue, errorReason="TYPE_ERROR"):
     return FieldValidationResult(value=None, valid=False, rawValue=rawValue, errorReason=errorReason)
 
 
+def noPhase3Results():
+    """테스트 헬퍼 — Phase3 3개 하위 IU의 "후보 없음" 결과를 만든다(assembleCandidateCommands 기본값)."""
+    return (
+        IgnitionOffReleaseResult(off=False, releaseCandidate=None),
+        ISOFIXLockResult(
+            leftLockActive=False,
+            rightLockActive=False,
+            leftLockCandidate=None,
+            rightLockCandidate=None,
+            leftReasonCode=None,
+            rightReasonCode=None,
+        ),
+        VehicleSpeedLockResult(locked=False, lockCandidate=None),
+    )
+
+
 def normalizedInput(
     timestampField,
     ignitionField,
@@ -55,8 +77,11 @@ def normalizedInput(
     fireField=None,
     overtempField=None,
     adultField=None,
+    vehicleSpeedField=None,
+    isofixLeftField=None,
+    isofixRightField=None,
 ):
-    """테스트 헬퍼 — NormalizedSafetyInput을 만든다(Phase2 6필드는 기본값을 그대로 사용 가능)."""
+    """테스트 헬퍼 — NormalizedSafetyInput을 만든다(Phase2/Phase3 신규 필드는 기본값을 그대로 사용 가능)."""
     kwargs = {
         "sourceTimestampField": timestampField,
         "ignitionOnField": ignitionField,
@@ -69,6 +94,9 @@ def normalizedInput(
         "fireField": fireField,
         "overtempField": overtempField,
         "adultField": adultField,
+        "vehicleSpeedField": vehicleSpeedField,
+        "isofixLeftField": isofixLeftField,
+        "isofixRightField": isofixRightField,
     }
     for name, value in optionalFields.items():
         if value is not None:
@@ -160,11 +188,11 @@ class TestSafetyKernelOrchestratorEvaluateCycleNormalPath(unittest.TestCase):
 
     def testFixedCallOrderAcrossAllSubComponents(self):
         """!
-        @brief IU-0002->0003->0010->0011->0012->0013->0005->0004->0006->0007->0008 고정 순서로
-               정확히 1회씩 호출한다(Phase2 갱신, 3장 상세 호출관계).
-        @technique 유스케이스 테스트(Use Case Testing) — 3장 상세 호출관계의 고정 순서 계약
-        @case Positive — 통합 순서(ENG-SWE2-001 11장/ENG-SWE3-001 3장)를 그대로 구현했는지 검증
-        @breaks 호출 순서가 뒤바뀌거나 Phase2 신규 단계가 생략/중복되는 회귀
+        @brief IU-0002->0003->0010->0011->0012->0013->0016->0015->0014->0005->0004->0006->0007->0008
+               고정 순서로 정확히 1회씩 호출한다(Phase3 갱신, 3.1절 상세 호출관계).
+        @technique 유스케이스 테스트(Use Case Testing) — 3.1절 상세 호출관계의 고정 순서 계약
+        @case Positive — 통합 순서(ENG-SWE2-001 11장/ENG-SWE3-001 3.1절)를 그대로 구현했는지 검증
+        @breaks 호출 순서가 뒤바뀌거나 Phase3 신규 단계가 생략/중복되는 회귀
         """
         callLog = []
         freshnessMonitor = recordCalls(FreshnessMonitor(), "evaluate", "IU-0002", callLog)
@@ -173,6 +201,11 @@ class TestSafetyKernelOrchestratorEvaluateCycleNormalPath(unittest.TestCase):
         approachRiskEvaluator = recordCalls(ApproachRiskEvaluator(), "evaluate", "IU-0011", callLog)
         overrideManager = recordCalls(ApproachRiskOverrideManager(), "decide", "IU-0012", callLog)
         fireMonitor = recordCalls(FireOvertempOccupantMonitor(), "evaluate", "IU-0013", callLog)
+        ignitionOffReleaseMonitor = recordCalls(
+            IgnitionOffReleaseMonitor(), "evaluate", "IU-0016", callLog
+        )
+        isofixMonitor = recordCalls(IsofixForcedLockMonitor(), "evaluate", "IU-0015", callLog)
+        vehicleSpeedMonitor = recordCalls(VehicleSpeedAutoLockMonitor(), "evaluate", "IU-0014", callLog)
         commandArbiter = recordCalls(CommandArbiter(), "arbitrate", "IU-0005", callLog)
         outputHoldActuator = recordCalls(OutputHoldActuator(), "confirm", "IU-0004", callLog)
         outputAdapter = recordCalls(OutputActuatorAdapter(), "publish", "IU-0006", callLog)
@@ -190,6 +223,9 @@ class TestSafetyKernelOrchestratorEvaluateCycleNormalPath(unittest.TestCase):
             approachRiskEvaluator=approachRiskEvaluator,
             overrideManager=overrideManager,
             fireMonitor=fireMonitor,
+            ignitionOffReleaseMonitor=ignitionOffReleaseMonitor,
+            isofixMonitor=isofixMonitor,
+            vehicleSpeedMonitor=vehicleSpeedMonitor,
         )
         input1 = normalizedInput(validField(1.000), validField(True), validField(False))
 
@@ -204,6 +240,9 @@ class TestSafetyKernelOrchestratorEvaluateCycleNormalPath(unittest.TestCase):
                 "IU-0011",
                 "IU-0012",
                 "IU-0013",
+                "IU-0016",
+                "IU-0015",
+                "IU-0014",
                 "IU-0005",
                 "IU-0004",
                 "IU-0006",
@@ -367,8 +406,84 @@ class TestSafetyKernelOrchestratorPhase2Wiring(unittest.TestCase):
         self.assertEqual(result.confirmedOutput.right, LockCommand.LOCK)
 
 
+class TestSafetyKernelOrchestratorPhase3Wiring(unittest.TestCase):
+    """IU-0009 Phase3 신규 호출/조립 단계 종단 검증(실제 IU-0014~0016 협력 객체 사용)."""
+
+    def testVehicleSpeedAboveThresholdLocksBothDoors(self):
+        """!
+        @brief vehicle_speed_kph>=3.0은 실제 체인을 거쳐 양쪽 문 모두 LOCK으로 확정된다(SWR-003a).
+        @technique 유스케이스 테스트(Use Case Testing) — SWR-003 자동주행잠금 종단 경로
+        @case Positive — IU-0014->assembleCandidateCommands->IU-0005->IU-0004 실제 배선을 검증
+        @breaks 차속 임계값 이상에서도 LOCK으로 확정되지 않는 회귀(자동주행잠금 배선 누락)
+        """
+        orchestrator = buildOrchestrator()
+        input1 = normalizedInput(
+            validField(1.000), validField(True), validField(False), vehicleSpeedField=validField(10.0)
+        )
+
+        result = orchestrator.evaluateCycle(input1, 1.000)
+
+        self.assertEqual(result.confirmedOutput.left, LockCommand.LOCK)
+        self.assertEqual(result.confirmedOutput.right, LockCommand.LOCK)
+
+    def testIsofixLeftLocksOnlyLeftDoor(self):
+        """!
+        @brief isofix_left=True만 있으면 좌측만 LOCK, 우측은 영향받지 않는다(SWR-018b 종단 검증).
+        @technique 유스케이스 테스트(Use Case Testing) — SWR-018 좌측 강제잠금 종단 경로
+        @case Positive — IU-0015->assembleCandidateCommands->IU-0005 실제 배선을 검증
+        @breaks 좌측 ISOFIX가 우측 출력에까지 영향을 주는 회귀
+        """
+        orchestrator = buildOrchestrator()
+        input1 = normalizedInput(
+            validField(1.000),
+            validField(True),
+            validField(False),
+            isofixLeftField=validField(True),
+            isofixRightField=validField(False),
+        )
+
+        result = orchestrator.evaluateCycle(input1, 1.000)
+
+        self.assertEqual(result.confirmedOutput.left, LockCommand.LOCK)
+        self.assertEqual(result.confirmedOutput.right, LockCommand.LOCK)
+
+    def testIgnitionOffReleasesBothDoors(self):
+        """!
+        @brief ignition_on=False는 실제 체인을 거쳐 양쪽 문 모두 RELEASE로 확정된다(SWR-020a).
+        @technique 유스케이스 테스트(Use Case Testing) — SWR-020 ignition-off 해제 종단 경로
+        @case Positive — IU-0016->assembleCandidateCommands->IU-0005->IU-0004 실제 배선을 검증
+        @breaks ignition_on=False에도 LOCK이 유지되는 회귀(entrapment 방지 배선 누락)
+        """
+        orchestrator = buildOrchestrator()
+        input1 = normalizedInput(validField(1.000), validField(False), validField(False))
+
+        result = orchestrator.evaluateCycle(input1, 1.000)
+
+        self.assertEqual(result.stateResult.state, SystemState.OFF)
+        self.assertEqual(result.confirmedOutput.left, LockCommand.RELEASE)
+        self.assertEqual(result.confirmedOutput.right, LockCommand.RELEASE)
+
+    def testStateFaultBlocksPhase3CandidatesEvenWithIgnitionOff(self):
+        """!
+        @brief state==FAULT이면 ignition_on=False로 생성된 해제 후보도 전부 차단된다(8.5절 FAULT 최우선 재확인).
+        @technique 결정테이블 테스트(Decision Table Testing) — 결정표 I, FAULT와 Phase3 신호 동시 발생
+        @case Negative — FAULT가 Phase3 후보보다 항상 우선한다는 종단 배선을 검증
+        @breaks FAULT 상태에서도 Phase3 신호가 출력을 바꿔버리는 회귀
+        """
+        orchestrator = buildOrchestrator()
+        input1 = normalizedInput(validField(1.000), validField(True), validField(True))
+        orchestrator.evaluateCycle(input1, 1.000)
+
+        faultAndOffInput = normalizedInput(validField(1.050), validField(False), validField(True))
+        result = orchestrator.evaluateCycle(faultAndOffInput, 1.050)
+
+        self.assertEqual(result.stateResult.state, SystemState.FAULT)
+        self.assertEqual(result.confirmedOutput.left, LockCommand.LOCK)
+        self.assertEqual(result.confirmedOutput.right, LockCommand.LOCK)
+
+
 class TestSafetyKernelOrchestratorAssembleCandidateCommands(unittest.TestCase):
-    """IU-0009.assembleCandidateCommands() 결정표 J 조립 계약 검증(정적 메서드, 6.7절)."""
+    """IU-0009.assembleCandidateCommands() 결정표 J 조립 계약 검증(정적 메서드, 6.7절/6.17절)."""
 
     def testIncludesCrashCandidateWhenPresent(self):
         """!
@@ -387,7 +502,7 @@ class TestSafetyKernelOrchestratorAssembleCandidateCommands(unittest.TestCase):
         forcedReleaseResult = fireMonitor.evaluate(validField(False), validField(False), validField(False))
 
         candidates = SafetyKernelOrchestrator.assembleCandidateCommands(
-            crashResult, approachResult, overrideDecision, forcedReleaseResult
+            crashResult, approachResult, overrideDecision, forcedReleaseResult, *noPhase3Results()
         )
 
         self.assertEqual(candidates, [crashResult.releaseCandidate])
@@ -410,7 +525,7 @@ class TestSafetyKernelOrchestratorAssembleCandidateCommands(unittest.TestCase):
         forcedReleaseResult = fireMonitor.evaluate(validField(False), validField(False), validField(False))
 
         candidates = SafetyKernelOrchestrator.assembleCandidateCommands(
-            crashResult, approachResult, overrideDecision, forcedReleaseResult
+            crashResult, approachResult, overrideDecision, forcedReleaseResult, *noPhase3Results()
         )
 
         self.assertEqual(candidates, [])
@@ -432,10 +547,48 @@ class TestSafetyKernelOrchestratorAssembleCandidateCommands(unittest.TestCase):
         forcedReleaseResult = fireMonitor.evaluate(validField(True), validField(False), validField(False))
 
         candidates = SafetyKernelOrchestrator.assembleCandidateCommands(
-            crashResult, approachResult, overrideDecision, forcedReleaseResult
+            crashResult, approachResult, overrideDecision, forcedReleaseResult, *noPhase3Results()
         )
 
         self.assertEqual(candidates, [forcedReleaseResult.releaseCandidate])
+
+    def testIncludesAllThreePhase3CandidatesWhenPresent(self):
+        """!
+        @brief ignitionOffResult/isofixResult(좌우)/vehicleSpeedResult에 후보가 있으면 4건 모두 조립 결과에 포함된다.
+        @technique 결정테이블 테스트(Decision Table Testing) — 결정표 J 확장(6.17절), Phase3 4개 append 행
+        @case Positive — Phase3 3개 하위 IU 결과가 override 같은 철회 조건 없이 그대로 포함되는지 검증
+        @breaks Phase3 신규 후보 중 일부가 조립 결과에서 누락되는 회귀
+        """
+        crashMonitor = CrashMonitor()
+        approachRiskEvaluator = ApproachRiskEvaluator()
+        overrideManager = ApproachRiskOverrideManager()
+        fireMonitor = FireOvertempOccupantMonitor()
+        ignitionOffReleaseMonitor = IgnitionOffReleaseMonitor()
+        isofixMonitor = IsofixForcedLockMonitor()
+        vehicleSpeedMonitor = VehicleSpeedAutoLockMonitor()
+        crashResult = crashMonitor.evaluate(validField(CrashStatus.NONE), 1.0)
+        approachResult = approachRiskEvaluator.evaluate(validField(False), validField(False))
+        overrideDecision = overrideManager.decide(False, False, False, False, 1.0)
+        forcedReleaseResult = fireMonitor.evaluate(validField(False), validField(False), validField(False))
+        ignitionOffResult = ignitionOffReleaseMonitor.evaluate(validField(False), 1.0)
+        isofixResult = isofixMonitor.evaluate(validField(True), validField(True))
+        vehicleSpeedResult = vehicleSpeedMonitor.evaluate(validField(10.0), 1.0)
+
+        candidates = SafetyKernelOrchestrator.assembleCandidateCommands(
+            crashResult,
+            approachResult,
+            overrideDecision,
+            forcedReleaseResult,
+            ignitionOffResult,
+            isofixResult,
+            vehicleSpeedResult,
+        )
+
+        self.assertIn(ignitionOffResult.releaseCandidate, candidates)
+        self.assertIn(isofixResult.leftLockCandidate, candidates)
+        self.assertIn(isofixResult.rightLockCandidate, candidates)
+        self.assertIn(vehicleSpeedResult.lockCandidate, candidates)
+        self.assertEqual(len(candidates), 4)
 
 
 class TestSafetyKernelOrchestratorComposeReleaseReRequested(unittest.TestCase):
